@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Local AI Office</title>
+
+    <link
+        rel="stylesheet"
+        href="/office/office.css"
+    >
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+
+    <!-- ================================================= -->
+    <!-- TOP BAR -->
+    <!-- ================================================= -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="brand-mark">
+                AI
+            </div>
+
+            <div>
+
+                <div class="brand-title">
+                    Local AI Office
+                </div>
+
+                <div class="brand-subtitle">
+                    Autonomous Agent Workspace
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="system-status">
+
+            <span
+                id="connection-dot"
+                class="status-dot"
+            ></span>
+
+            <span id="connection-text">
+                Connecting
+            </span>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- ================================================= -->
+    <!-- MAIN -->
+    <!-- ================================================= -->
+
+    <main class="main-layout">
+
+
+        <!-- ============================================= -->
+        <!-- LEFT SIDEBAR -->
+        <!-- ============================================= -->
+
+        <aside class="sidebar">
+
+
+            <div class="nav">
+
+                <div class="nav-item active">
+                    <span>⌂</span>
+                    Office
+                </div>
+
+                <div class="nav-item">
+                    <span>♙</span>
+                    Agents
+                </div>
+
+                <div class="nav-item">
+                    <span>□</span>
+                    Tasks
+                </div>
+
+                <div class="nav-item">
+                    <span>⚙</span>
+                    Settings
+                </div>
+
+            </div>
+
+
+            <div class="sidebar-section">
+
+                <div class="section-heading">
+
+                    <span>AGENTS</span>
+
+                    <span
+                        id="agent-count"
+                        class="count"
+                    >
+                        0
+                    </span>
+
+                </div>
+
+
+                <button
+                    id="add-agent-button"
+                    class="add-agent-button"
+                >
+
+                    <span>+</span>
+
+                    Add Agent
+
+                </button>
+
+
+                <div
+                    id="agent-list"
+                    class="agent-list"
+                ></div>
+
+            </div>
+
+        </aside>
+
+
+
+        <!-- ============================================= -->
+        <!-- CENTER -->
+        <!-- ============================================= -->
+
+        <section class="center">
+
+
+            <!-- OFFICE -->
+
+            <div class="office-shell">
+
+                <div class="office-title">
+
+                    <div>
+
+                        <strong>
+                            OFFICE FLOOR
+                        </strong>
+
+                        <span>
+                            LIVE
+                        </span>
+
+                    </div>
+
+                    <div class="office-hint">
+                        Agent movement is driven by live events
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="office"
+                    class="office"
+                >
+
+                    <div class="wall back-wall"></div>
+
+                    <div class="window window-one"></div>
+
+                    <div class="window window-two"></div>
+
+
+                    <div class="floor-grid"></div>
+
+
+                    <div class="boss-room">
+
+                        <div class="room-label">
+                            BOSS
+                        </div>
+
+                        <div class="boss-desk">
+
+                            <div class="desk-top"></div>
+
+                            <div class="desk-leg left"></div>
+
+                            <div class="desk-leg right"></div>
+
+                            <div class="monitor">
+
+                                <div class="screen">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="desk-layer"
+                        class="desk-layer"
+                    ></div>
+
+
+                    <div
+                        id="agent-layer"
+                        class="agent-layer"
+                    ></div>
+
+
+                    <div
+                        id="message-layer"
+                        class="message-layer"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- BOTTOM AREA -->
+
+            <div class="bottom-grid">
+
+
+                <!-- CHAT -->
+
+                <section class="panel chat-panel">
+
+                    <div class="panel-title">
+                        Talk to Boss
+                    </div>
+
+                    <div class="chat-box">
+                        <div id="boss-response" class="boss-response">
+                            <div class="boss-response-label">BOSS</div>
+                            <div id="boss-response-text">
+                                Waiting for your request...
+                            </div>
+                        </div>
+
+                        <textarea
+                            id="chat-input"
+                            placeholder="Give a task to the team or ask a question..."
+                        ></textarea>
+
+                        <button
+                            id="send-button"
+                            class="send-button"
+                        >
+                            ➤
+                        </button>
+
+                    </div>
+
+                </section>
+
+
+
+                <!-- TASKS -->
+
+                <!-- WORKSPACE -->
+
+                <section class="panel workspace-panel">
+                    <div class="panel-title">
+                        Project Workspace
+                    </div>
+                    <div
+                        id="selected-agent-label"
+                        class="workspace-subtitle"
+                    >
+                        Waiting for a generated project...
+                    </div>
+                    <div id="workspace" class="workspace-content">
+                        <div class="empty-workspace">
+                            Generated projects and files will appear here.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TASKS -->
+
+                <section class="panel">
+                    <div class="panel-title">
+                        Current Tasks
+                    </div>
+                    <div
+                        id="task-list"
+                        class="task-list"
+                    ></div>
+                </section>
+
+
+
+
+        <!-- ============================================= -->
+        <!-- RIGHT SIDEBAR -->
+        <!-- ============================================= -->
+
+        <aside class="right-sidebar">
+
+
+            <section class="panel activity-panel">
+
+                <div class="panel-heading">
+
+                    <span>
+                        Activity Log
+                    </span>
+
+                    <span class="live-label">
+                        ● Real-time
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="activity-log"
+                    class="activity-log"
+                ></div>
+
+            </section>
+
+
+
+            <section
+                id="inspector"
+                class="panel inspector"
+            >
+
+                <div class="panel-heading">
+                    Agent Inspector
+                </div>
+
+
+                <div
+                    id="inspector-content"
+                    class="inspector-content"
+                >
+
+                    <div class="empty-inspector">
+
+                        Select an agent to inspect it.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </aside>
+
+    </main>
+
+
+
+    <!-- ================================================= -->
+    <!-- ADD AGENT MODAL -->
+    <!-- ================================================= -->
+
+    <div
+        id="modal-backdrop"
+        class="modal-backdrop hidden"
+    >
+
+        <div class="modal">
+
+            <div class="modal-header">
+
+                <div>
+
+                    <div class="modal-title">
+                        Add Agent
+                    </div>
+
+                    <div class="modal-subtitle">
+                        Create a new local AI worker
+                    </div>
+
+                </div>
+
+                <button
+                    id="close-modal"
+                    class="close-button"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <label>
+                Name
+            </label>
+
+            <input
+                id="agent-name"
+                placeholder="data_engineer"
+            >
+
+
+            <label>
+                Role
+            </label>
+
+            <input
+                id="agent-role"
+                placeholder="Data Engineering"
+            >
+
+
+            <label>
+                Instructions
+            </label>
+
+            <textarea
+                id="agent-instructions"
+                placeholder="Build and review data pipelines..."
+            ></textarea>
+
+
+            <div class="modal-actions">
+
+                <button
+                    id="cancel-agent"
+                    class="secondary-button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    id="create-agent"
+                    class="primary-button"
+                >
+                    Add Agent
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<script
+    src="/office/office.js"
+></script>
+
+</body>
+
+</html>

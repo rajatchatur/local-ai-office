@@ -1,0 +1,72 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Task Manager</title>
+    <style>
+        body {
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+            font-family: Arial, sans-serif;
+        }
+        form { margin-bottom: 20px; }
+        input[type="text"] {
+            padding: 10px;
+            width: 70%;
+            max-width: 450px;
+        }
+        button { padding: 9px 12px; cursor: pointer; }
+        li { margin: 15px 0; }
+        .completed { text-decoration: line-through; color: gray; }
+        .inline-form { display: inline; }
+    </style>
+</head>
+<body>
+    <h1>Task Manager</h1>
+
+    <form method="POST" action="{{ url_for('add') }}">
+        <input
+            type="text"
+            name="description"
+            maxlength="200"
+            placeholder="Enter a task"
+            required
+        >
+        <button type="submit">Add Task</button>
+    </form>
+
+    <h2>Your Tasks</h2>
+
+    {% if tasks %}
+    <ul>
+        {% for task in tasks %}
+        <li>
+            <span class="{{ 'completed' if task.completed else '' }}">
+                {{ task.description }}
+            </span>
+
+            <form class="inline-form"
+                  method="POST"
+                  action="{{ url_for('complete', task_id=task.id) }}">
+                <button type="submit">
+                    {{ 'Mark Incomplete' if task.completed else 'Complete' }}
+                </button>
+            </form>
+
+            <form class="inline-form"
+                  method="POST"
+                  action="{{ url_for('delete', task_id=task.id) }}">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No tasks yet. Add your first task above.</p>
+    {% endif %}
+</body>
+</html>
+```

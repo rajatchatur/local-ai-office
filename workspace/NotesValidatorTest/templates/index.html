@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notes Validator Test</title>
+</head>
+<body>
+    <h1>Notes</h1>
+    <ul>
+        {% for note in notes %}
+        <li>{{ note.title }} - {{ note.content }}<br>
+        <a href='/delete/{{ note.id }}'>Delete</a></li>
+        {% endfor %}
+    </ul>
+    <form method='POST' action='/add'>
+        <input type='text' name='title' placeholder='Title' required>
+        <textarea name='content' placeholder='Content' required></textarea>
+        <button type='submit'>Add Note</button>
+    </form>
+</body>
+</html>

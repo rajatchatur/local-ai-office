@@ -1,0 +1,2730 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    background: #0d1117;
+    color: #e6eaf0;
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+
+/* =====================================================
+   APP
+===================================================== */
+
+.app {
+    min-height: 100vh;
+}
+
+
+/* =====================================================
+   TOPBAR
+===================================================== */
+
+.topbar {
+    height: 68px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 24px;
+
+    background: #11161d;
+
+    border-bottom: 1px solid #252c35;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-mark {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    background: #1e3148;
+
+    color: #8bbcff;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.brand-title {
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.brand-subtitle {
+    margin-top: 2px;
+
+    color: #737e8b;
+
+    font-size: 11px;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: #8f99a5;
+
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #69727d;
+}
+
+.status-dot.online {
+    background: #56c596;
+    box-shadow: 0 0 8px rgba(86, 197, 150, .5);
+}
+
+
+/* =====================================================
+   MAIN
+===================================================== */
+
+.main-layout {
+    display: grid;
+
+    grid-template-columns:
+        245px
+        minmax(500px, 1fr)
+        300px;
+
+    min-height:
+        calc(100vh - 68px);
+}
+
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+.sidebar {
+    padding: 18px;
+
+    background: #11161d;
+
+    border-right: 1px solid #252c35;
+}
+
+.nav {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+
+    margin-bottom: 28px;
+}
+
+.nav-item {
+    padding: 10px 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    border-radius: 7px;
+
+    color: #7f8995;
+
+    font-size: 13px;
+
+    cursor: pointer;
+}
+
+.nav-item span {
+    width: 18px;
+
+    text-align: center;
+
+    font-size: 15px;
+}
+
+.nav-item.active {
+    background: #182536;
+
+    color: #a9caff;
+}
+
+.sidebar-section {
+    margin-top: 15px;
+}
+
+.section-heading {
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-bottom: 10px;
+
+    color: #8c96a3;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+}
+
+.count {
+    color: #65707d;
+}
+
+.add-agent-button {
+    width: 100%;
+
+    padding: 9px;
+
+    margin-bottom: 12px;
+
+    border:
+        1px solid #303a47;
+
+    border-radius: 7px;
+
+    background: #151c25;
+
+    color: #b8c2cf;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+.add-agent-button:hover {
+    background: #1a2430;
+    border-color: #405064;
+}
+
+.add-agent-button span {
+    margin-right: 7px;
+}
+
+
+/* =====================================================
+   AGENT LIST
+===================================================== */
+
+.agent-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+}
+
+.agent-card {
+    position: relative;
+
+    padding: 10px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+}
+
+.agent-card:hover {
+    background: #171e27;
+}
+
+.agent-avatar {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 9px;
+
+    background: #26364a;
+
+    color: #a9caff;
+
+    font-size: 13px;
+}
+
+.agent-info {
+    min-width: 0;
+}
+
+.agent-name {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.agent-role {
+    margin-top: 3px;
+
+    overflow: hidden;
+
+    color: #737f8d;
+
+    font-size: 10px;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+.agent-status {
+    margin-top: 4px;
+
+    color: #5bc59a;
+
+    font-size: 9px;
+}
+
+.agent-status.working {
+    color: #d6ad67;
+}
+
+.agent-status.failed {
+    color: #df7676;
+}
+
+
+/* =====================================================
+   CENTER
+===================================================== */
+
+.center {
+    min-width: 0;
+
+    padding: 16px;
+
+    background: #0d1117;
+}
+
+
+/* =====================================================
+   OFFICE SHELL
+===================================================== */
+
+.office-shell {
+    overflow: hidden;
+
+    border:
+        1px solid #29323d;
+
+    border-radius: 11px;
+
+    background: #131a22;
+
+    box-shadow:
+        0 15px 50px rgba(0,0,0,.25);
+}
+
+.office-title {
+    height: 48px;
+
+    padding: 0 15px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    border-bottom:
+        1px solid #29323d;
+
+    color: #87929f;
+
+    font-size: 10px;
+
+    letter-spacing: 1px;
+}
+
+.office-title strong {
+    color: #c7ced8;
+
+    font-size: 11px;
+}
+
+.office-title span {
+    margin-left: 8px;
+
+    color: #5fc89b;
+}
+
+.office-hint {
+    color: #596573;
+
+    font-size: 9px;
+
+    letter-spacing: 0;
+}
+
+
+/* =====================================================
+   OFFICE SCENE
+===================================================== */
+
+.office {
+    position: relative;
+
+    height: 610px;
+
+    overflow: hidden;
+
+    background: #c5b99f;
+
+    perspective: 1000px;
+}
+
+
+/* back wall */
+
+.wall {
+    position: absolute;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+    height: 25%;
+
+    background: #d4cbb9;
+
+    border-bottom:
+        7px solid #a79c89;
+}
+
+
+/* windows */
+
+.window {
+    position: absolute;
+
+    top: 35px;
+
+    width: 170px;
+    height: 85px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #718da2,
+            #b9d1d9
+        );
+
+    border:
+        7px solid #817a6e;
+
+    box-shadow:
+        inset 0 0 25px rgba(255,255,255,.12);
+}
+
+.window-one {
+    left: 8%;
+}
+
+.window-two {
+    right: 8%;
+}
+
+
+/* floor */
+
+.floor-grid {
+    position: absolute;
+
+    left: -10%;
+    bottom: -15%;
+
+    width: 120%;
+    height: 82%;
+
+    background-color: #c6b99b;
+
+    background-image:
+        linear-gradient(
+            rgba(70,60,45,.11) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(70,60,45,.11) 1px,
+            transparent 1px
+        );
+
+    background-size: 45px 45px;
+
+    transform:
+        perspective(700px)
+        rotateX(6deg);
+}
+
+
+/* =====================================================
+   BOSS ROOM
+===================================================== */
+
+.boss-room {
+    position: absolute;
+
+    left: 50%;
+    top: 25px;
+
+    width: 250px;
+    height: 230px;
+
+    transform:
+        translateX(-50%);
+
+    z-index: 5;
+
+    background:
+        rgba(110,93,70,.08);
+
+    border:
+        1px solid rgba(90,77,60,.25);
+
+    border-radius: 9px;
+}
+
+.room-label {
+    position: absolute;
+
+    top: 12px;
+    left: 15px;
+
+    color: #665e53;
+
+    font-size: 9px;
+
+    letter-spacing: 2px;
+
+    font-weight: 700;
+}
+
+
+/* =====================================================
+   DESKS
+===================================================== */
+
+.desk-layer,
+.agent-layer,
+.message-layer {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 20;
+
+    pointer-events: none;
+}
+
+.desk {
+    position: absolute;
+
+    width: 125px;
+    height: 70px;
+
+    z-index: 10;
+}
+
+.desk-top {
+    position: absolute;
+
+    width: 125px;
+    height: 24px;
+
+    border-radius: 4px;
+
+    background: #654c3a;
+
+    border:
+        3px solid #4d382b;
+
+    box-shadow:
+        0 5px 0 #4d382b;
+}
+
+.desk-leg {
+    position: absolute;
+
+    top: 24px;
+
+    width: 8px;
+    height: 45px;
+
+    background: #4d382b;
+}
+
+.desk-leg.left {
+    left: 13px;
+}
+
+.desk-leg.right {
+    right: 13px;
+}
+
+
+/* monitor */
+
+.desk .monitor {
+    position: absolute;
+
+    left: 35px;
+    top: -45px;
+
+    width: 55px;
+    height: 40px;
+
+    border-radius: 4px;
+
+    background: #252a30;
+
+    border:
+        3px solid #15191e;
+}
+
+.desk .screen {
+    position: absolute;
+
+    left: 6px;
+    top: 6px;
+
+    width: 37px;
+    height: 23px;
+
+    background: #416878;
+}
+
+
+/* boss desk */
+
+.boss-desk {
+    position: absolute;
+
+    left: 63px;
+    top: 115px;
+
+    width: 125px;
+    height: 70px;
+}
+
+
+/* =====================================================
+   CHARACTERS
+===================================================== */
+
+.character {
+    position: absolute;
+
+    width: 42px;
+    height: 88px;
+
+    z-index: 50;
+
+    transition:
+        left 1.8s cubic-bezier(.2,.8,.2,1),
+        top 1.8s cubic-bezier(.2,.8,.2,1);
+
+    pointer-events:
+        auto;
+
+    cursor: pointer;
+}
+
+.character.walking {
+    animation:
+        walk .28s infinite alternate;
+}
+
+.character.working {
+    animation:
+        work .7s infinite alternate;
+}
+
+@keyframes walk {
+    from {
+        transform:
+            translateY(0)
+            rotate(-4deg);
+    }
+
+    to {
+        transform:
+            translateY(-5px)
+            rotate(4deg);
+    }
+}
+
+@keyframes work {
+    from {
+        transform:
+            translateY(0);
+    }
+
+    to {
+        transform:
+            translateY(-3px);
+    }
+}
+
+
+/* head */
+
+.character .head {
+    position: absolute;
+
+    left: 7px;
+    top: 0;
+
+    width: 28px;
+    height: 28px;
+
+    border-radius: 7px;
+
+    background: #e9b88f;
+
+    border:
+        2px solid #9b7359;
+
+    z-index: 4;
+}
+
+.character .head::before {
+    content: "";
+
+    position: absolute;
+
+    top: 10px;
+    left: 6px;
+
+    width: 4px;
+    height: 4px;
+
+    border-radius: 50%;
+
+    background: #222;
+
+    box-shadow:
+        12px 0 #222;
+}
+
+
+/* body */
+
+.character .body {
+    position: absolute;
+
+    left: 5px;
+    top: 27px;
+
+    width: 32px;
+    height: 35px;
+
+    border-radius: 5px;
+
+    background: #47739b;
+
+    border:
+        2px solid #2c4b66;
+}
+
+
+/* arms */
+
+.character .arm {
+    position: absolute;
+
+    top: 30px;
+
+    width: 9px;
+    height: 31px;
+
+    border-radius: 5px;
+
+    background: #e9b88f;
+
+    border:
+        2px solid #9b7359;
+}
+
+.character .left-arm {
+    left: -3px;
+}
+
+.character .right-arm {
+    right: -3px;
+}
+
+
+/* legs */
+
+.character .leg {
+    position: absolute;
+
+    top: 60px;
+
+    width: 11px;
+    height: 29px;
+
+    border-radius: 3px;
+
+    background: #292d34;
+}
+
+.character .left-leg {
+    left: 8px;
+}
+
+.character .right-leg {
+    right: 8px;
+}
+
+
+/* boss */
+
+.character.boss .body {
+    background: #34465e;
+}
+
+.character.researcher .body {
+    background: #547e58;
+}
+
+.character.coder .body {
+    background: #67558c;
+}
+
+.character.analyst .body {
+    background: #a76647;
+}
+
+/* =====================================================
+   GAME CHARACTER MOVEMENT
+===================================================== */
+
+.character {
+    transform-origin: center bottom;
+
+    will-change:
+        left,
+        top,
+        transform;
+
+    --walk-duration: 1800ms;
+}
+
+
+/* =====================================================
+   WALKING
+===================================================== */
+
+.character.walking {
+    animation:
+        character-walk
+        .32s
+        infinite
+        alternate
+        ease-in-out;
+}
+
+
+/* =====================================================
+   WALK CYCLE
+===================================================== */
+
+@keyframes character-walk {
+
+    0% {
+
+        transform:
+            translateY(0)
+            rotate(-2deg);
+
+    }
+
+    50% {
+
+        transform:
+            translateY(-3px)
+            rotate(2deg);
+
+    }
+
+    100% {
+
+        transform:
+            translateY(0)
+            rotate(-2deg);
+
+    }
+}
+
+
+/* =====================================================
+   WORKING
+===================================================== */
+
+.character.working {
+
+    animation:
+        character-working
+        .9s
+        infinite
+        ease-in-out;
+
+}
+
+
+@keyframes character-working {
+
+    0% {
+
+        transform:
+            translateY(0);
+
+    }
+
+    50% {
+
+        transform:
+            translateY(-2px);
+
+    }
+
+    100% {
+
+        transform:
+            translateY(0);
+
+    }
+
+}
+
+
+/* =====================================================
+   DIRECTION
+===================================================== */
+
+.character.facing-left {
+
+    transform-origin:
+        center bottom;
+
+}
+
+
+.character.facing-right {
+
+    transform-origin:
+        center bottom;
+
+}
+
+
+/* =====================================================
+   LEGS
+===================================================== */
+
+.character.walking .left-leg {
+
+    animation:
+        left-leg-walk
+        .32s
+        infinite
+        alternate;
+
+}
+
+
+.character.walking .right-leg {
+
+    animation:
+        right-leg-walk
+        .32s
+        infinite
+        alternate;
+
+}
+
+
+@keyframes left-leg-walk {
+
+    from {
+
+        transform:
+            rotate(18deg);
+
+    }
+
+    to {
+
+        transform:
+            rotate(-18deg);
+
+    }
+
+}
+
+
+@keyframes right-leg-walk {
+
+    from {
+
+        transform:
+            rotate(-18deg);
+
+    }
+
+    to {
+
+        transform:
+            rotate(18deg);
+
+    }
+
+}
+
+
+/* =====================================================
+   ARMS
+===================================================== */
+
+.character.walking .left-arm {
+
+    animation:
+        left-arm-walk
+        .32s
+        infinite
+        alternate;
+
+}
+
+
+.character.walking .right-arm {
+
+    animation:
+        right-arm-walk
+        .32s
+        infinite
+        alternate;
+
+}
+
+
+@keyframes left-arm-walk {
+
+    from {
+
+        transform:
+            rotate(-22deg);
+
+    }
+
+    to {
+
+        transform:
+            rotate(22deg);
+
+    }
+
+}
+
+
+@keyframes right-arm-walk {
+
+    from {
+
+        transform:
+            rotate(22deg);
+
+    }
+
+    to {
+
+        transform:
+            rotate(-22deg);
+
+    }
+
+}
+
+
+/* =====================================================
+   SHADOW
+===================================================== */
+
+.character::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 4px;
+
+    bottom: -5px;
+
+    width: 34px;
+
+    height: 8px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(0,0,0,.22);
+
+    filter:
+        blur(2px);
+
+    z-index: -1;
+
+}
+
+
+.character.walking::after {
+
+    animation:
+        shadow-walk
+        .32s
+        infinite
+        alternate;
+
+}
+
+
+@keyframes shadow-walk {
+
+    from {
+
+        transform:
+            scaleX(.85);
+
+        opacity: .18;
+
+    }
+
+    to {
+
+        transform:
+            scaleX(1.05);
+
+        opacity: .28;
+
+    }
+
+}
+
+
+/* =====================================================
+   CHARACTER LABEL
+===================================================== */
+
+.character-label {
+    position: absolute;
+
+    left: -24px;
+    top: -28px;
+
+    padding: 4px 7px;
+
+    white-space: nowrap;
+
+    border:
+        1px solid rgba(255,255,255,.15);
+
+    border-radius: 5px;
+
+    background: #1a212b;
+
+    color: #e1e5ea;
+
+    font-size: 9px;
+
+    box-shadow:
+        0 5px 15px rgba(0,0,0,.2);
+}
+
+
+/* =====================================================
+   MESSAGE
+===================================================== */
+
+.message {
+    position: absolute;
+
+    z-index: 100;
+
+    max-width: 190px;
+
+    padding: 8px 11px;
+
+    border-radius: 9px;
+
+    background: #f4f5f6;
+
+    color: #252a30;
+
+    font-size: 10px;
+
+    line-height: 1.4;
+
+    box-shadow:
+        0 8px 25px rgba(0,0,0,.22);
+
+    animation:
+        bubble-in .2s ease;
+}
+
+@keyframes bubble-in {
+
+    from {
+        opacity: 0;
+        transform:
+            translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateY(0);
+    }
+}
+
+
+/* =====================================================
+   BOTTOM GRID
+===================================================== */
+
+.bottom-grid {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1.4fr;
+
+    gap: 12px;
+
+    margin-top: 12px;
+}
+
+
+/* =====================================================
+   PANELS
+===================================================== */
+
+.panel {
+    background: #131a22;
+
+    border:
+        1px solid #29323d;
+
+    border-radius: 9px;
+
+    overflow: hidden;
+}
+
+.panel-title,
+.panel-heading {
+    padding: 12px 14px;
+
+    border-bottom:
+        1px solid #29323d;
+
+    color: #aab3be;
+
+    font-size: 11px;
+
+    font-weight: 600;
+}
+
+
+/* =====================================================
+   CHAT
+===================================================== */
+
+.chat-box {
+    position: relative;
+
+    padding: 12px;
+}
+
+#chat-input {
+    width: 100%;
+
+    height: 72px;
+
+    resize: none;
+
+    padding: 10px;
+
+    border:
+        1px solid #303a46;
+
+    border-radius: 7px;
+
+    outline: none;
+
+    background: #0f151c;
+
+    color: #dbe0e6;
+
+    font-size: 11px;
+}
+
+#chat-input:focus {
+    border-color: #4a617c;
+}
+
+.send-button {
+    position: absolute;
+
+    right: 20px;
+    bottom: 20px;
+
+    width: 30px;
+    height: 30px;
+
+    border: none;
+
+    border-radius: 7px;
+
+    background: #304b6b;
+
+    color: #bcd8f8;
+
+    cursor: pointer;
+}
+
+
+/* =====================================================
+   TASKS
+===================================================== */
+
+.task-list {
+    max-height: 100px;
+
+    overflow-y: auto;
+}
+
+.task-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 9px 12px;
+
+    border-bottom:
+        1px solid #222a33;
+
+    font-size: 10px;
+}
+
+.task-status {
+    margin-left: auto;
+
+    padding: 4px 7px;
+
+    border-radius: 10px;
+
+    background: #1b3028;
+
+    color: #65c69b;
+
+    font-size: 8px;
+}
+
+
+/* =====================================================
+   RIGHT SIDEBAR
+===================================================== */
+
+.right-sidebar {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    padding: 16px;
+
+    background: #11161d;
+
+    border-left:
+        1px solid #252c35;
+}
+
+.activity-panel {
+    min-height: 390px;
+}
+
+.live-label {
+    float: right;
+
+    color: #58bf92;
+
+    font-size: 9px;
+}
+
+.activity-log {
+    max-height: 365px;
+
+    overflow-y: auto;
+}
+
+.activity-item {
+    padding: 10px 12px;
+
+    border-bottom:
+        1px solid #202832;
+}
+
+.activity-time {
+    color: #596571;
+
+    font-size: 8px;
+}
+
+.activity-message {
+    margin-top: 3px;
+
+    color: #b3bbc5;
+
+    font-size: 10px;
+
+    line-height: 1.4;
+}
+
+
+/* =====================================================
+   INSPECTOR
+===================================================== */
+
+.inspector-content {
+    padding: 13px;
+}
+
+.empty-inspector {
+    color: #697583;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+.inspector-name {
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+.inspector-role {
+    margin-top: 3px;
+
+    color: #75818e;
+
+    font-size: 10px;
+}
+
+.inspector-status {
+    margin-top: 15px;
+
+    color: #61c79b;
+
+    font-size: 10px;
+}
+
+.inspector-section {
+    margin-top: 18px;
+
+    padding-top: 12px;
+
+    border-top:
+        1px solid #27303a;
+}
+
+.inspector-label {
+    color: #596673;
+
+    font-size: 9px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 1px;
+}
+
+.inspector-value {
+    margin-top: 5px;
+
+    color: #b7c0ca;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+.remove-agent {
+    width: 100%;
+
+    margin-top: 20px;
+
+    padding: 8px;
+
+    border:
+        1px solid #593b3b;
+
+    border-radius: 6px;
+
+    background: #211719;
+
+    color: #d18484;
+
+    cursor: pointer;
+}
+
+
+/* =====================================================
+   MODAL
+===================================================== */
+
+.modal-backdrop {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 500;
+
+    display: grid;
+
+    place-items: center;
+
+    background:
+        rgba(5,8,12,.72);
+
+    backdrop-filter:
+        blur(5px);
+}
+
+.hidden {
+    display: none;
+}
+
+.modal {
+    width: min(440px, 90vw);
+
+    padding: 20px;
+
+    border:
+        1px solid #343e4b;
+
+    border-radius: 11px;
+
+    background: #151c24;
+
+    box-shadow:
+        0 30px 100px rgba(0,0,0,.5);
+}
+
+.modal-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-size: 15px;
+
+    font-weight: 650;
+}
+
+.modal-subtitle {
+    margin-top: 4px;
+
+    color: #6f7a87;
+
+    font-size: 10px;
+}
+
+.close-button {
+    border: none;
+
+    background: transparent;
+
+    color: #788391;
+
+    font-size: 22px;
+
+    cursor: pointer;
+}
+
+.modal label {
+    display: block;
+
+    margin:
+        13px 0 6px;
+
+    color: #8994a1;
+
+    font-size: 10px;
+}
+
+.modal input,
+.modal textarea {
+    width: 100%;
+
+    padding: 9px;
+
+    border:
+        1px solid #303945;
+
+    border-radius: 6px;
+
+    outline: none;
+
+    background: #0e141b;
+
+    color: #e0e4e8;
+
+    font-size: 11px;
+}
+
+.modal textarea {
+    min-height: 85px;
+
+    resize: vertical;
+}
+
+.modal input:focus,
+.modal textarea:focus {
+    border-color: #48617c;
+}
+
+.modal-actions {
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    margin-top: 20px;
+}
+
+.secondary-button,
+.primary-button {
+    padding: 8px 13px;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    font-size: 10px;
+}
+
+.secondary-button {
+    border:
+        1px solid #303945;
+
+    background: #171d25;
+
+    color: #8d97a3;
+}
+
+.primary-button {
+    border: none;
+
+    background: #345675;
+
+    color: #d9e9f8;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+
+    .main-layout {
+        grid-template-columns:
+            210px
+            minmax(450px, 1fr);
+    }
+
+    .right-sidebar {
+        display: none;
+    }
+}
+
+@media (max-width: 850px) {
+
+    .main-layout {
+        display: block;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .center {
+        padding: 8px;
+    }
+
+    .office {
+        height: 520px;
+    }
+
+    .bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.file-item {
+    width: 100%;
+    padding: 8px 9px;
+
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 6px;
+
+    background: rgba(255,255,255,.02);
+    color: #b9c6d1;
+
+    text-align: left;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        monospace;
+
+    font-size: 10px;
+
+    cursor: pointer;
+}
+
+.file-item:hover {
+    border-color:
+        rgba(105,211,255,.35);
+
+    background:
+        rgba(105,211,255,.05);
+
+    color: #eef7fb;
+}
+
+.back-button {
+    padding: 6px 8px;
+    margin-bottom: 10px;
+
+    border: 1px solid
+        rgba(255,255,255,.08);
+
+    border-radius: 6px;
+
+    background: #151d26;
+    color: #aebac5;
+
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.code-title {
+    margin-bottom: 8px;
+
+    color: #69d3ff;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        monospace;
+
+    font-size: 10px;
+}
+
+.code-viewer {
+    margin: 0;
+    padding: 12px;
+
+    overflow: auto;
+
+    max-height:
+        calc(100vh - 250px);
+
+    border: 1px solid
+        rgba(255,255,255,.07);
+
+    border-radius: 7px;
+
+    background: #070a0e;
+    color: #d9e2e8;
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    font-size: 10px;
+    line-height: 1.55;
+
+    white-space: pre;
+}
+
+/* =====================================================
+   PS2 OFFICE VISUAL UPGRADE
+   Add below the existing CSS
+===================================================== */
+
+/* -----------------------------------------------------
+   OFFICE DEPTH
+----------------------------------------------------- */
+
+.office {
+    background:
+        linear-gradient(
+            180deg,
+            #cfc4ad 0%,
+            #c4b79d 38%,
+            #b8a889 100%
+        );
+
+    box-shadow:
+        inset 0 30px 80px rgba(255,255,255,.08),
+        inset 0 -80px 120px rgba(45,35,25,.18);
+}
+
+/* Wall lighting */
+
+.wall {
+    background:
+        linear-gradient(
+            180deg,
+            #ddd5c5 0%,
+            #cec3af 75%,
+            #aaa08e 100%
+        );
+
+    box-shadow:
+        inset 0 15px 35px rgba(255,255,255,.15);
+}
+
+/* Floor */
+
+.floor-grid {
+    background-color: #b9aa8c;
+
+    background-image:
+        linear-gradient(
+            rgba(50,42,32,.13) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(50,42,32,.13) 1px,
+            transparent 1px
+        ),
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,.12),
+            transparent 65%
+        );
+
+    box-shadow:
+        inset 0 100px 100px rgba(40,30,20,.12);
+}
+
+
+/* -----------------------------------------------------
+   WINDOWS
+----------------------------------------------------- */
+
+.window {
+    background:
+        linear-gradient(
+            145deg,
+            #607f96 0%,
+            #9dbbc7 48%,
+            #d0e0df 100%
+        );
+
+    box-shadow:
+        inset 0 0 30px rgba(255,255,255,.25),
+        0 6px 12px rgba(50,40,30,.18);
+
+    position: absolute;
+}
+
+/* Window reflections */
+
+.window::before {
+    content: "";
+
+    position: absolute;
+
+    left: 12px;
+    top: 10px;
+
+    width: 55%;
+    height: 18px;
+
+    background:
+        linear-gradient(
+            110deg,
+            rgba(255,255,255,.38),
+            transparent
+        );
+
+    transform: skewX(-20deg);
+
+    opacity: .45;
+}
+
+
+/* -----------------------------------------------------
+   DESKS — MORE GAME-LIKE
+----------------------------------------------------- */
+
+.desk {
+    filter:
+        drop-shadow(
+            0 9px 8px rgba(40,30,20,.22)
+        );
+}
+
+.desk-top {
+    background:
+        linear-gradient(
+            180deg,
+            #795b43,
+            #5a4232
+        );
+
+    border-color: #443226;
+
+    box-shadow:
+        0 5px 0 #443226,
+        inset 0 2px rgba(255,255,255,.08);
+}
+
+.desk-leg {
+    background:
+        linear-gradient(
+            90deg,
+            #3f3026,
+            #5b4332,
+            #382a22
+        );
+}
+
+
+/* -----------------------------------------------------
+   MONITORS
+----------------------------------------------------- */
+
+.desk .monitor {
+    background:
+        linear-gradient(
+            145deg,
+            #343a42,
+            #171b20
+        );
+
+    box-shadow:
+        0 5px 8px rgba(0,0,0,.25);
+}
+
+.desk .screen {
+    background:
+        radial-gradient(
+            ellipse at center,
+            #608d9c,
+            #294550
+        );
+
+    box-shadow:
+        inset 0 0 12px rgba(80,200,230,.18);
+}
+
+
+/* =====================================================
+   CHARACTERS — LOW POLY GAME STYLE
+===================================================== */
+
+.character {
+    width: 50px;
+    height: 105px;
+
+    transform-origin:
+        50% 100%;
+
+    transition:
+        left 1.8s cubic-bezier(.18,.82,.25,1),
+        top 1.8s cubic-bezier(.18,.82,.25,1);
+
+    filter:
+        drop-shadow(
+            0 7px 5px rgba(20,15,10,.28)
+        );
+}
+
+
+/* -----------------------------------------------------
+   HEAD
+----------------------------------------------------- */
+
+.character .head {
+    left: 9px;
+    top: 0;
+
+    width: 32px;
+    height: 31px;
+
+    border-radius:
+        11px 11px 9px 9px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #f2c39c,
+            #d99b72
+        );
+
+    border:
+        2px solid #9b6d52;
+
+    box-shadow:
+        inset -4px -4px 7px rgba(100,50,30,.12);
+}
+
+
+/* hair */
+
+.character .head::after {
+    content: "";
+
+    position: absolute;
+
+    left: -2px;
+    top: -4px;
+
+    width: 32px;
+    height: 13px;
+
+    border-radius:
+        13px 13px 5px 5px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #302b28,
+            #171514
+        );
+
+    box-shadow:
+        3px 2px 0 rgba(0,0,0,.12);
+}
+
+
+/* eyes */
+
+.character .head::before {
+    top: 13px;
+    left: 7px;
+
+    width: 4px;
+    height: 4px;
+
+    background: #171717;
+
+    box-shadow:
+        13px 0 #171717;
+}
+
+
+/* -----------------------------------------------------
+   BODY
+----------------------------------------------------- */
+
+.character .body {
+    left: 7px;
+    top: 29px;
+
+    width: 36px;
+    height: 39px;
+
+    border-radius:
+        7px 7px 5px 5px;
+
+    box-shadow:
+        inset -5px -4px 8px rgba(0,0,0,.15),
+        inset 3px 2px 5px rgba(255,255,255,.08);
+}
+
+
+/* shirt highlight */
+
+.character .body::before {
+    content: "";
+
+    position: absolute;
+
+    left: 7px;
+    top: 3px;
+
+    width: 8px;
+    height: 26px;
+
+    border-radius: 5px;
+
+    background:
+        rgba(255,255,255,.09);
+
+    transform:
+        skewY(-8deg);
+}
+
+
+/* -----------------------------------------------------
+   ARMS
+----------------------------------------------------- */
+
+.character .arm {
+    top: 32px;
+
+    width: 10px;
+    height: 34px;
+
+    transform-origin:
+        50% 5px;
+
+    box-shadow:
+        inset -2px -2px 4px rgba(0,0,0,.12);
+}
+
+
+/* -----------------------------------------------------
+   LEGS
+----------------------------------------------------- */
+
+.character .leg {
+    top: 66px;
+
+    width: 12px;
+    height: 33px;
+
+    transform-origin:
+        50% 4px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #22262c,
+            #383d45,
+            #1b1e23
+        );
+
+    box-shadow:
+        inset -2px 0 4px rgba(0,0,0,.18);
+}
+
+
+/* shoes */
+
+.character .leg::after {
+    content: "";
+
+    position: absolute;
+
+    bottom: -2px;
+
+    width: 17px;
+    height: 8px;
+
+    border-radius:
+        4px 6px 3px 3px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #26282b,
+            #111214
+        );
+}
+
+.character .left-leg::after {
+    left: -3px;
+}
+
+.character .right-leg::after {
+    right: -3px;
+}
+
+
+/* =====================================================
+   WALK CYCLE
+===================================================== */
+
+.character.walking .left-leg {
+    animation:
+        leg-left .32s infinite alternate ease-in-out;
+}
+
+.character.walking .right-leg {
+    animation:
+        leg-right .32s infinite alternate ease-in-out;
+}
+
+.character.walking .left-arm {
+    animation:
+        arm-left .32s infinite alternate ease-in-out;
+}
+
+.character.walking .right-arm {
+    animation:
+        arm-right .32s infinite alternate ease-in-out;
+}
+
+@keyframes leg-left {
+    from {
+        transform:
+            rotate(18deg);
+    }
+
+    to {
+        transform:
+            rotate(-18deg);
+    }
+}
+
+@keyframes leg-right {
+    from {
+        transform:
+            rotate(-18deg);
+    }
+
+    to {
+        transform:
+            rotate(18deg);
+    }
+}
+
+@keyframes arm-left {
+    from {
+        transform:
+            rotate(-18deg);
+    }
+
+    to {
+        transform:
+            rotate(18deg);
+    }
+}
+
+@keyframes arm-right {
+    from {
+        transform:
+            rotate(18deg);
+    }
+
+    to {
+        transform:
+            rotate(-18deg);
+    }
+}
+
+
+/* body bounce while walking */
+
+.character.walking {
+    animation:
+        body-walk .32s infinite alternate ease-in-out;
+}
+
+@keyframes body-walk {
+    from {
+        margin-top: 0;
+    }
+
+    to {
+        margin-top: -3px;
+    }
+}
+
+
+/* =====================================================
+   WORKING ANIMATION
+===================================================== */
+
+.character.working .right-arm {
+    animation:
+        typing-arm .42s infinite alternate ease-in-out;
+}
+
+.character.working .left-arm {
+    animation:
+        typing-arm-reverse .42s infinite alternate ease-in-out;
+}
+
+@keyframes typing-arm {
+    from {
+        transform:
+            rotate(-25deg);
+    }
+
+    to {
+        transform:
+            rotate(-48deg);
+    }
+}
+
+@keyframes typing-arm-reverse {
+    from {
+        transform:
+            rotate(25deg);
+    }
+
+    to {
+        transform:
+            rotate(48deg);
+    }
+}
+
+
+/* =====================================================
+   BOSS
+===================================================== */
+
+.character.boss {
+    filter:
+        drop-shadow(
+            0 9px 6px rgba(20,15,10,.35)
+        );
+}
+
+.character.boss .head {
+    background:
+        linear-gradient(
+            145deg,
+            #f4c6a0,
+            #d69a70
+        );
+}
+
+.character.boss .body {
+    background:
+        linear-gradient(
+            145deg,
+            #465a75,
+            #28394f
+        );
+
+    border-color:
+        #26364a;
+}
+
+
+/* boss jacket/shirt */
+
+.character.boss .body::after {
+    content: "";
+
+    position: absolute;
+
+    left: 15px;
+    top: 0;
+
+    width: 2px;
+    height: 36px;
+
+    background:
+        rgba(255,255,255,.12);
+}
+
+
+/* =====================================================
+   WORKER COLORS
+===================================================== */
+
+.character.researcher .body {
+    background:
+        linear-gradient(
+            145deg,
+            #628b65,
+            #3d6242
+        );
+}
+
+.character.coder .body {
+    background:
+        linear-gradient(
+            145deg,
+            #79649e,
+            #51406d
+        );
+}
+
+.character.analyst .body {
+    background:
+        linear-gradient(
+            145deg,
+            #b47450,
+            #814b35
+        );
+}
+
+
+/* =====================================================
+   CHARACTER LABEL
+===================================================== */
+
+.character-label {
+    left: -31px;
+    top: -31px;
+
+    padding:
+        4px 8px;
+
+    border:
+        1px solid rgba(255,255,255,.12);
+
+    border-radius: 5px;
+
+    background:
+        rgba(20,25,31,.92);
+
+    backdrop-filter:
+        blur(5px);
+
+    box-shadow:
+        0 5px 18px rgba(0,0,0,.25);
+}
+
+
+/* =====================================================
+   AGENT ACTIVITY GLOW
+===================================================== */
+
+.character.working::after {
+    content: "";
+
+    position: absolute;
+
+    left: 8px;
+    bottom: -7px;
+
+    width: 34px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background:
+        rgba(50,190,140,.18);
+
+    filter:
+        blur(4px);
+
+    animation:
+        activity-pulse 1s infinite alternate;
+}
+
+@keyframes activity-pulse {
+    from {
+        opacity: .35;
+        transform: scaleX(.8);
+    }
+
+    to {
+        opacity: .8;
+        transform: scaleX(1.15);
+    }
+}
+
+
+/* =====================================================
+   MESSAGE BUBBLES
+===================================================== */
+
+.message {
+    border:
+        1px solid rgba(40,45,50,.12);
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,.25);
+
+    font-size: 10px;
+}
+
+.message::after {
+    content: "";
+
+    position: absolute;
+
+    left: 18px;
+    bottom: -6px;
+
+    width: 11px;
+    height: 11px;
+
+    background: #f4f5f6;
+
+    transform:
+        rotate(45deg);
+}
+
+
+/* =====================================================
+   OFFICE ATMOSPHERE
+===================================================== */
+
+.office::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 150;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 45%,
+            rgba(30,25,18,.16) 100%
+        );
+
+    mix-blend-mode:
+        multiply;
+}
+
+
+/* =====================================================
+   ACTIVE AGENT
+===================================================== */
+
+.character.selected {
+    filter:
+        drop-shadow(
+            0 0 7px rgba(105,211,255,.65)
+        )
+        drop-shadow(
+            0 10px 6px rgba(20,15,10,.28)
+        );
+}
+
+.character.selected .character-label {
+    border-color:
+        rgba(105,211,255,.45);
+
+    color: #dff7ff;
+}
+
+
+/* =====================================================
+   WALKING TASK INDICATOR
+===================================================== */
+
+.character.carrying-task::before {
+    content: "▣";
+
+    position: absolute;
+
+    right: -15px;
+    top: 36px;
+
+    width: 15px;
+    height: 15px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 3px;
+
+    background: #e5c47c;
+
+    color: #332817;
+
+    font-size: 8px;
+
+    box-shadow:
+        0 3px 6px rgba(0,0,0,.25);
+
+    animation:
+        document-bounce .6s infinite alternate;
+}
+
+@keyframes document-bounce {
+    from {
+        transform:
+            translateY(0);
+    }
+
+    to {
+        transform:
+            translateY(-3px);
+    }
+}
+
+/* =================================================
+   BOSS RESPONSE
+================================================= */
+
+.boss-response {
+    margin: 12px;
+    padding: 14px;
+    min-height: 100px;
+    max-height: 260px;
+    overflow-y: auto;
+
+    background: rgba(10, 15, 25, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+
+    font-size: 13px;
+    line-height: 1.6;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.25);
+
+    white-space: pre-wrap;
+}
+
+.boss-response-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    opacity: 0.65;
+}
+
+#boss-response-text {
+    white-space: pre-wrap;
+}
+/* =================================================
+   PROJECT WORKSPACE
+================================================= */
+
+.workspace-panel {
+    min-width: 0;
+}
+
+.workspace-subtitle {
+    margin: 8px 0 14px;
+    color: #aab6c5;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.workspace-content {
+    min-width: 0;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.workspace-card {
+    margin-bottom: 10px;
+    padding: 12px;
+    background: rgba(10, 15, 25, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.workspace-card .label {
+    margin-bottom: 6px;
+    color: #9baabd;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.workspace-card .value {
+    color: #e5eaf1;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.file-item {
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    color: #dbe7f5;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 7px;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.file-item:hover {
+    background: rgba(100, 160, 255, 0.12);
+    border-color: rgba(100, 160, 255, 0.4);
+}
+
+.empty-workspace {
+    padding: 16px 10px;
+    color: #8d9aab;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
