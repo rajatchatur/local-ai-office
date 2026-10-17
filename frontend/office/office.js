@@ -2007,6 +2007,51 @@ function showArtifact(artifact) {
     `;
 
     workspace.appendChild(statusCard);
+
+    const outputCard = document.createElement("div");
+    outputCard.className = "workspace-card";
+
+    const stdout = execution.stdout || "";
+    const stderr = execution.stderr || "";
+
+    outputCard.innerHTML = `
+        <div class="label">PROGRAM OUTPUT</div>
+        <pre class="value program-output"></pre>
+    `;
+
+    outputCard.querySelector("pre").textContent =
+        stdout || "(No standard output)";
+
+    workspace.appendChild(outputCard);
+
+    if (stderr) {
+        const errorCard = document.createElement("div");
+        errorCard.className = "workspace-card";
+
+        errorCard.innerHTML = `
+            <div class="label">ERROR OUTPUT</div>
+            <pre class="value program-output"></pre>
+        `;
+
+        errorCard.querySelector("pre").textContent = stderr;
+        workspace.appendChild(errorCard);
+    }
+
+    if (typeof execution.return_code === "number") {
+        const exitCard = document.createElement("div");
+        exitCard.className = "workspace-card";
+
+        exitCard.innerHTML = `
+            <div class="label">EXIT CODE</div>
+            <div class="value"></div>
+        `;
+
+        exitCard.querySelector(".value").textContent =
+            String(execution.return_code);
+
+        workspace.appendChild(exitCard);
+    }
+
     const title =
         document.createElement("div");
 

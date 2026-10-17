@@ -1,2 +1,0 @@
-requests==2.25.1
-yelp-fusion==0.4.3

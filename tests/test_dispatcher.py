@@ -130,3 +130,52 @@ def test_dispatcher_rejects_missing_worker():
         assert event_bus.get_all_events() == []
 
     asyncio.run(run_test())
+
+
+class FailedExecutionCoder:
+    name = "coder"
+
+    async def run(self, task):
+        import json
+
+        return json.dumps({
+            "project_name": "TaskManagerPro",
+            "status": "failed",
+            "execution": {
+                "return_code": 1,
+                "stdout": "",
+                "stderr": "AttributeError: 'TaskManager' object has no attribute 'start'",
+            },
+        })
+
+    def get_info(self):
+        return {"name": self.name}
+
+
+def test_dispatcher_marks_failed_coder_execution_as_failed():
+    async def run_test():
+        dispatcher, task_manager, event_bus = (
+            create_dispatcher(FailedExecutionCoder())
+        )
+
+        task = task_manager.create_task(
+            description="Build a working task manager",
+            assigned_to="coder",
+        )
+
+        with pytest.raises(RuntimeError, match="execution failed"):
+            await dispatcher.dispatch(task.id)
+
+        assert task.status == "failed"
+        assert "AttributeError" in task.result
+
+        event_types = [
+            event.event_type for event in event_bus.get_all_events()
+        ]
+
+        assert "task_failed" in event_types
+        assert "agent_failed" in event_types
+        assert "task_completed" not in event_types
+        assert "agent_completed" not in event_types
+
+    asyncio.run(run_test())

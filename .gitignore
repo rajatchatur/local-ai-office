@@ -1,0 +1,31 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# macOS metadata
+.DS_Store
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local environment and logs
+.env
+*.log
+
+# Local generated project artifacts
+data/generated/
+
+# Local source backups
+*.bak
+*.before_*
+*.save
+
+# Compiled Java output
+*.class

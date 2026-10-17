@@ -132,3 +132,104 @@ def test_flask_route_validator_skips_dynamic_url_for_action():
 
     # Dynamic Jinja actions are outside the static validator's scope.
     coder._validate_flask_routes(project)
+
+def test_adds_requirements_for_known_external_imports():
+    coder = make_coder()
+    project = make_project({
+        "main.py": (
+            "from flask import Flask\n"
+            "import requests\n"
+            "app = Flask(__name__)\n"
+        ),
+    })
+
+    changed = coder._ensure_known_requirements(project)
+
+    assert changed is True
+    requirements = next(
+        item["content"]
+        for item in project["files"]
+        if item["path"] == "requirements.txt"
+    )
+    assert requirements.splitlines() == ["flask", "requests"]
+
+
+def test_does_not_add_requirements_for_standard_library_only():
+    coder = make_coder()
+    project = make_project({
+        "main.py": "import json\nimport sqlite3\nprint('hello')\n",
+    })
+
+    assert coder._ensure_known_requirements(project) is False
+    assert all(
+        item["path"] != "requirements.txt"
+        for item in project["files"]
+    )
+
+
+def test_preserves_existing_requirements_file():
+    coder = make_coder()
+    project = make_project({
+        "main.py": "from flask import Flask\n",
+        "requirements.txt": "flask>=3.0\n",
+    })
+
+    assert coder._ensure_known_requirements(project) is False
+
+    requirements = next(
+        item["content"]
+        for item in project["files"]
+        if item["path"] == "requirements.txt"
+    )
+    assert requirements == "flask>=3.0\n"
+
+
+def test_adds_requirements_for_known_external_imports():
+    coder = make_coder()
+    project = make_project({
+        "main.py": (
+            "from flask import Flask\n"
+            "import requests\n"
+            "app = Flask(__name__)\n"
+        ),
+    })
+
+    changed = coder._ensure_known_requirements(project)
+
+    assert changed is True
+    requirements = next(
+        item["content"]
+        for item in project["files"]
+        if item["path"] == "requirements.txt"
+    )
+    assert requirements.splitlines() == ["flask", "requests"]
+
+
+def test_does_not_add_requirements_for_standard_library_only():
+    coder = make_coder()
+    project = make_project({
+        "main.py": "import json\nimport sqlite3\nprint('hello')\n",
+    })
+
+    assert coder._ensure_known_requirements(project) is False
+    assert all(
+        item["path"] != "requirements.txt"
+        for item in project["files"]
+    )
+
+
+def test_preserves_existing_requirements_file():
+    coder = make_coder()
+    project = make_project({
+        "main.py": "from flask import Flask\n",
+        "requirements.txt": "flask>=3.0\n",
+    })
+
+    assert coder._ensure_known_requirements(project) is False
+
+    requirements = next(
+        item["content"]
+        for item in project["files"]
+        if item["path"] == "requirements.txt"
+    )
+    assert requirements == "flask>=3.0\n"

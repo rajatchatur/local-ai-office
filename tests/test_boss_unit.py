@@ -51,39 +51,40 @@ def test_boss_reports_worker_failure_instead_of_success():
         agent_registry.register(FailingWorker())
 
         async def fake_plan(user_request):
-            return [
-                {
-                    "description": "Perform the requested work",
-                    "assigned_to": "researcher",
-                }
-            ]
+            return [{
+                "description": "Perform the requested work",
+                "assigned_to": "researcher",
+            }]
 
         boss.create_plan = fake_plan
 
-        result = await boss.run(
-            "Build a complex application with multiple steps"
-        )
+        with pytest.raises(
+            RuntimeError,
+            match="Simulated worker failure",
+        ) as exc_info:
+            await boss.run(
+                "Build a complex application with multiple steps"
+            )
+
+        assert "Request incomplete" in str(exc_info.value)
+        assert boss.get_status() == "failed"
 
         failed_tasks = [
             task for task in task_manager.get_all_tasks()
             if task.status == "failed"
         ]
-
-        assert failed_tasks, "The failed worker task should be recorded"
+        assert failed_tasks
         assert "Simulated worker failure" in failed_tasks[0].result
-        assert isinstance(result, str)
-        assert result.strip()
-        assert "Simulated worker failure" in result or (
-            "failed" in result.lower()
-            or "incomplete" in result.lower()
-        )
 
         event_types = [
             event.event_type for event in event_bus.get_all_events()
         ]
         assert "task_failed" in event_types
+        assert "agent_failed" in event_types
 
     asyncio.run(run_test())
+
+
 def test_boss_reports_partial_failure_when_multiple_workers_run():
     async def run_test():
         boss, task_manager, agent_registry, event_bus = make_boss()
@@ -129,28 +130,120 @@ def test_boss_reports_partial_failure_when_multiple_workers_run():
 
         boss.create_plan = fake_plan
 
-        async def fake_synthesize(user_request, worker_results):
-            return "\n".join(
-                item["result"] for item in worker_results
+        with pytest.raises(
+            RuntimeError,
+            match="Analysis service failed",
+        ) as exc_info:
+            await boss.run(
+                "Build a complex application with multiple steps"
             )
 
-        boss.synthesize = fake_synthesize
-
-        result = await boss.run(
-            "Build a complex application with multiple steps"
-        )
+        assert "Request incomplete" in str(exc_info.value)
+        assert boss.get_status() == "failed"
 
         tasks = task_manager.get_all_tasks()
         assert len(tasks) == 2
-
         assert any(task.status == "completed" for task in tasks)
         assert any(task.status == "failed" for task in tasks)
 
-        assert "Research findings are ready." in result
-        assert "Analysis service failed" in result
-        assert (
-            "incomplete" in result.lower()
-            or "failed" in result.lower()
-        ), "The final answer should clearly disclose partial failure"
+        event_types = [
+            event.event_type for event in event_bus.get_all_events()
+        ]
+        assert "task_completed" in event_types
+        assert "task_failed" in event_types
+        assert "agent_failed" in event_types
+
+    asyncio.run(run_test())
+
+
+def test_boss_preserves_original_coder_result_when_synthesizing():
+    import json
+
+    from backend.agents.boss_agent import _coder_result_context
+
+    async def run_test():
+        boss, task_manager, agent_registry, event_bus = make_boss()
+
+        project = {
+            "project_name": "MultiWorkerProject",
+            "summary": "Regression test project",
+            "files": [
+                {
+                    "path": "main.py",
+                    "content": "print('ok')",
+                }
+            ],
+            "status": "success",
+            "execution": {
+                "return_code": 0,
+                "stdout": "ok",
+                "stderr": "",
+            },
+        }
+        original_coder_json = json.dumps(project)
+
+        class CoderWorker:
+            name = "coder"
+
+            async def run(self, task):
+                return original_coder_json
+
+            def get_info(self):
+                return {"name": self.name}
+
+            def get_status(self):
+                return "idle"
+
+        class ResearcherWorker:
+            name = "researcher"
+
+            async def run(self, task):
+                return "Research findings are ready."
+
+            def get_info(self):
+                return {"name": self.name}
+
+            def get_status(self):
+                return "idle"
+
+        agent_registry.register(CoderWorker())
+        agent_registry.register(ResearcherWorker())
+
+        async def fake_plan(user_request):
+            return [
+                {
+                    "description": "Build the application",
+                    "assigned_to": "coder",
+                },
+                {
+                    "description": "Research supporting information",
+                    "assigned_to": "researcher",
+                },
+            ]
+
+        async def fake_synthesize(user_request, worker_results):
+            assert len(worker_results) == 2
+            assert {item["agent"] for item in worker_results} == {
+                "coder",
+                "researcher",
+            }
+            return "Synthesized final answer."
+
+        boss.create_plan = fake_plan
+        boss.synthesize = fake_synthesize
+
+        final_answer = await boss.run(
+            "Build a complex application with multiple steps"
+        )
+
+        assert final_answer == "Synthesized final answer."
+
+        captured_result = _coder_result_context.get()
+        assert captured_result == original_coder_json
+        assert json.loads(captured_result) == project
+
+        tasks = task_manager.get_all_tasks()
+        assert len(tasks) == 2
+        assert all(task.status == "completed" for task in tasks)
 
     asyncio.run(run_test())

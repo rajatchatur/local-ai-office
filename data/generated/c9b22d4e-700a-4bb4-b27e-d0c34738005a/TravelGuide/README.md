@@ -1,1 +1,0 @@
-# TravelGuide App\n## Running the App\n1. Install the required packages by running `pip install -r requirements.txt` in your terminal.\n2. Run the app using `python main.py`.\nThe app will be available at http://localhost:5000.

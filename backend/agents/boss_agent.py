@@ -8,7 +8,12 @@ from backend.core.dispatcher import Dispatcher
 from backend.core.agent_registry import AgentRegistry
 from backend.core.message_bus import MessageBus
 from backend.core.event_bus import EventBus
+from contextvars import ContextVar
 
+_coder_result_context = ContextVar(
+    "local_ai_office_coder_result",
+    default=None,
+)
 
 class BossAgent(BaseAgent):
 
@@ -63,7 +68,7 @@ class BossAgent(BaseAgent):
         """
     
         total_start = time.perf_counter()
-
+        _coder_result_context.set(None)
         self.set_status(
             "thinking",
             {"request": user_request},
@@ -200,44 +205,37 @@ class BossAgent(BaseAgent):
 
         worker_results = []
 
-        for task, result in zip(
-            tasks,
-            results,
-        ):
-
-            if isinstance(
-                result,
-                Exception,
-            ):
-
-                print(
-                    f"\nBOSS: {task.assigned_to} failed:"
-                )
-
+        for task, result in zip(tasks, results):
+            if isinstance(result, Exception):
+                print(f"\nBOSS: {task.assigned_to} failed:")
                 print(result)
-
-                worker_results.append(
-                    {
-                        "agent": task.assigned_to,
-                        "task": task.description,
-                        "result": (
-                            f"Worker failed with error: {result}"
-                        ),
-                    }
-                )
-
+                worker_results.append({
+                    "agent": task.assigned_to,
+                    "task": task.description,
+                    "result": f"Worker failed with error: {result}",
+                })
             else:
+                worker_results.append(result)
 
-                worker_results.append(
-                    result
-                )
-
-            failed_count = sum(
-        1
-        for task, result in zip(tasks, results)
+        failed_count = sum(
+            1 for result in results
             if isinstance(result, Exception)
         )
 
+        # Preserve the Coder output separately from the synthesized answer.
+        # ContextVar keeps this value isolated between concurrent requests.
+        for task, result in zip(tasks, results):
+            if (
+                task.assigned_to == "coder"
+                and not isinstance(result, Exception)
+            ):
+                coder_output = (
+                    result.get("result")
+                    if isinstance(result, dict) and "result" in result
+                    else result
+                )
+                _coder_result_context.set(coder_output)
+                break
         successful_count = len(tasks) - failed_count
 
         print(
@@ -245,6 +243,26 @@ class BossAgent(BaseAgent):
             f"Successful: {successful_count}, "
             f"Failed: {failed_count}"
         )
+
+        if failed_count:
+            failure_details = "\n".join(
+                f"{task.assigned_to}: {result}"
+                for task, result in zip(tasks, results)
+                if isinstance(result, Exception)
+            )
+            error_message = (
+                f"Request incomplete: {failed_count} of {len(tasks)} "
+                f"worker task(s) failed.\n{failure_details}"
+            )
+            self.set_status(
+                "failed",
+                {
+                    "request": user_request,
+                    "error": error_message,
+                    "failed_tasks": failed_count,
+                },
+            )
+            raise RuntimeError(error_message)
 
         # For simple single-worker tasks, the worker's answer
         # can be returned directly without another LLM call.

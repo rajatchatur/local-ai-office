@@ -1,6 +1,7 @@
 import ast
 import json
 import re
+import shlex
 from typing import Any
 from backend.agents.base_agent import BaseAgent
 from backend.llm.llama_cpp_client import LlamaCppClient
@@ -54,6 +55,8 @@ PYTHON_STDLIB_MODULES = {
     "warnings",
     "xml",
 }
+
+
 class CoderAgent(BaseAgent):
     """
     Coder agent responsible for generating complete software projects.
@@ -90,6 +93,15 @@ class CoderAgent(BaseAgent):
         self.workspace = Workspace(
                 "/Users/rajatchatur/Desktop/local-ai-office/workspace"
             )
+    @staticmethod
+    def _repair_javascript_newline_separators(content: str) -> str:
+        """Repair literal \n separators between recognizable JS statements."""
+        return re.sub(
+            r";\\n(?=\s*(?:console\.|const\s|let\s|var\s|function\s|if\s|return\s|//|$))",
+            ";\n",
+            content,
+        )
+
     def write_project_to_workspace(self, project: dict) -> str:
         """
         Write a generated Project to the local workspace.
@@ -98,17 +110,267 @@ class CoderAgent(BaseAgent):
         project_dir = project["project_name"].strip()
 
         for file in project["files"]:
-            file_path = f"{project_dir}/{file['path']}"
+            relative_path = file["path"]
+            content = file["content"]
+
+            if relative_path.lower().endswith(".js"):
+                content = self._repair_javascript_newline_separators(
+                    content
+                )
+
+            file_path = f"{project_dir}/{relative_path}"
 
             self.workspace.create_file(
                 file_path,
-                file["content"],
+                content,
             )
 
         return project_dir
 
 
+    def _run_java_project(
+        self,
+        project_name: str,
+        project_files: dict,
+    ) -> dict:
+        """Compile and run a Java project in its workspace directory."""
+        import re
+
+        prefix = f"{project_name}/"
+        java_files = [
+            (path[len(prefix):], content)
+            for path, content in project_files.items()
+            if path.startswith(prefix) and path.endswith(".java")
+        ]
+
+        if not java_files:
+            return {
+                "return_code": 1,
+                "stdout": "",
+                "stderr": "Java project contains no .java source files.",
+            }
+
+        main_class = None
+
+        for relative_path, content in java_files:
+            if not re.search(
+                r"\bstatic\s+void\s+main\s*\(\s*String\s*\[\s*\]",
+                content,
+            ):
+                continue
+
+            class_match = re.search(
+                r"\b(?:public\s+)?(?:final\s+)?class\s+"
+                r"([A-Za-z_$][\w$]*)",
+                content,
+            )
+            if not class_match:
+                continue
+
+            package_match = re.search(
+                r"^\s*package\s+([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*;",
+                content,
+                re.MULTILINE,
+            )
+            class_name = class_match.group(1)
+
+            main_class = (
+                f"{package_match.group(1)}.{class_name}"
+                if package_match
+                else class_name
+            )
+            break
+
+        if main_class is None:
+            return {
+                "return_code": 1,
+                "stdout": "",
+                "stderr": (
+                    "Could not find a Java class with "
+                    "public static void main(String[] args)."
+                ),
+            }
+
+        sources = " ".join(
+            shlex.quote(relative_path)
+            for relative_path, _ in java_files
+        )
+
+        print("CODER: Compiling Java project...")
+        compile_result = self.workspace.run_command(
+            f"javac -d . {sources}",
+            cwd=project_name,
+            timeout=60,
+        )
+
+        if compile_result["return_code"] != 0:
+            return compile_result
+
+        print(f"CODER: Running Java class: {main_class}")
+        return self.workspace.run_command(
+            f"java -cp . {shlex.quote(main_class)}",
+            cwd=project_name,
+            timeout=60,
+        )
+
+    def _run_javascript_project(
+        self,
+        project_name: str,
+        project_files: dict,
+    ) -> dict:
+        """Run a JavaScript project with Node.js."""
+        prefix = f"{project_name}/"
+        js_files = [
+            path[len(prefix):]
+            for path in project_files
+            if path.startswith(prefix)
+            and path.endswith(".js")
+            and "/node_modules/" not in path
+        ]
+
+        if not js_files:
+            return {
+                "return_code": 1,
+                "stdout": "",
+                "stderr": "JavaScript project contains no .js source files.",
+            }
+
+        preferred = ("index.js", "main.js", "app.js")
+        entry_point = next(
+            (name for name in preferred if name in js_files),
+            None,
+        )
+
+        if entry_point is None:
+            top_level = [name for name in js_files if "/" not in name]
+            if len(top_level) == 1:
+                entry_point = top_level[0]
+            elif len(js_files) == 1:
+                entry_point = js_files[0]
+
+        if entry_point is None:
+            return {
+                "return_code": 1,
+                "stdout": "",
+                "stderr": (
+                    "Could not determine the JavaScript entry point. "
+                    "Include index.js or main.js, or provide exactly one "
+                    "JavaScript source file."
+                ),
+            }
+
+        source_path = f"{project_name}/{entry_point}"
+        source_content = project_files.get(source_path)
+
+        if isinstance(source_content, str):
+            repaired_content = self._repair_javascript_newline_separators(
+                source_content
+            )
+            if repaired_content != source_content:
+                self.workspace.edit_file(source_path, repaired_content)
+                print(
+                    "CODER: Repaired escaped newline separators in "
+                    f"{entry_point}"
+                )
+
+        print(f"CODER: Running JavaScript entry point: {entry_point}")
+        syntax_result = self.workspace.run_command(
+            f"node --check {shlex.quote(entry_point)}",
+            cwd=project_name,
+            timeout=60,
+        )
+
+        if syntax_result["return_code"] != 0:
+            return syntax_result
+
+        print(f"CODER: Executing JavaScript entry point: {entry_point}")
+        return self.workspace.run_command(
+            f"node {shlex.quote(entry_point)}",
+            cwd=project_name,
+            timeout=60,
+        )
+
     def run_project(self, project_name: str) -> dict:
+        """Run the application and any discovered Python test suite."""
+        application_result = self._run_project_application(project_name)
+        result = dict(application_result)
+        result["application_result"] = dict(application_result)
+
+        test_result = self._run_project_tests(project_name)
+        result["test_result"] = test_result
+
+        if test_result["return_code"] != 0:
+            if result["return_code"] == 0:
+                result["return_code"] = test_result["return_code"]
+
+            test_stderr = test_result.get("stderr", "")
+            message = "Automated project tests failed."
+            if test_stderr:
+                message += "\n" + test_stderr
+            result["stderr"] = (
+                result.get("stderr", "").rstrip()
+                + ("\n" if result.get("stderr", "").strip() else "")
+                + message
+            )
+
+        return result
+
+    def _run_project_tests(self, project_name: str) -> dict:
+        """Run pytest only when Python test files exist in this project."""
+        from pathlib import PurePosixPath
+
+        project_files = self.inspect_project(project_name)
+        prefix = f"{project_name}/"
+        excluded_parts = {
+            "__pycache__", ".venv", "venv", "site-packages", "node_modules"
+        }
+
+        test_files = []
+        for path in project_files:
+            if not path.startswith(prefix) or not path.endswith(".py"):
+                continue
+
+            relative_path = path[len(prefix):]
+            parts = PurePosixPath(relative_path).parts
+            if any(part in excluded_parts for part in parts):
+                continue
+
+            filename = PurePosixPath(relative_path).name
+            if filename.startswith("test_") or filename.endswith("_test.py"):
+                test_files.append(relative_path)
+
+        if not test_files:
+            return {
+                "status": "no_tests",
+                "return_code": 0,
+                "stdout": "",
+                "stderr": "",
+                "test_files": [],
+            }
+
+        import shlex
+
+        test_files = sorted(set(test_files))
+        test_command = "python -m pytest -q " + " ".join(
+            shlex.quote(path) for path in test_files
+        )
+
+        print(f"CODER: Running {len(test_files)} project test file(s)...")
+        execution = self.workspace.run_command(
+            test_command,
+            cwd=project_name,
+            timeout=120,
+        )
+
+        return {
+            "status": "passed" if execution["return_code"] == 0 else "failed",
+            "return_code": execution["return_code"],
+            "stdout": execution["stdout"],
+            "stderr": execution["stderr"],
+            "test_files": sorted(test_files),
+        }
+
+    def _run_project_application(self, project_name: str) -> dict:
         """
         Install dependencies, validate Python syntax, and check
         whether the generated application can start.
@@ -116,6 +378,31 @@ class CoderAgent(BaseAgent):
         project_files = self.inspect_project(project_name)
         print("DEBUG project_name:", repr(project_name))
         print("DEBUG project_files:", list(project_files.keys()))
+
+        # Keep Python projects on the existing, tested execution path.
+        has_python = any(
+            path.startswith(f"{project_name}/") and path.endswith(".py")
+            for path in project_files
+        )
+        has_java = any(
+            path.startswith(f"{project_name}/") and path.endswith(".java")
+            for path in project_files
+        )
+
+        has_javascript = any(
+            path.startswith(f"{project_name}/")
+            and path.endswith(".js")
+            and "/node_modules/" not in path
+            for path in project_files
+        )
+
+        if has_java and not has_python and not has_javascript:
+            return self._run_java_project(project_name, project_files)
+
+        if has_javascript and not has_python and not has_java:
+            return self._run_javascript_project(
+                project_name, project_files
+            )
 
         # 1. Install dependencies when requirements.txt exists.
         requirements_path = f"{project_name}/requirements.txt"
@@ -391,21 +678,69 @@ class CoderAgent(BaseAgent):
             project_name,
             execution_result,
         )
+                # Validate the LLM response before accessing its fields.
+        if not isinstance(fix, dict):
+            raise ValueError("Invalid repair response")
 
         print("\nCODER: LLM generated fix:")
         print(fix)
 
-        file_path = fix["file"]
+
+        # Validate the LLM-generated repair before modifying any file.
+        if not isinstance(fix, dict):
+            raise ValueError("Invalid repair response")
+
+        file_path = fix.get("file")
+        content = fix.get("content")
+
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("unsafe repair path: empty or invalid path")
+
+        if not isinstance(content, str):
+            raise ValueError("Invalid repair content")
 
         prefix = f"{project_name}/"
-
         if file_path.startswith(prefix):
             file_path = file_path[len(prefix):]
 
+        normalized_path = file_path.replace("\\", "/")
+
+        if (
+            not normalized_path
+            or normalized_path.startswith("/")
+            or "\\" in file_path
+            or ".." in normalized_path.split("/")
+        ):
+            raise ValueError(f"unsafe repair path: {file_path}")
+
+        # Repairs may modify existing project files only.
+        project_files = self.inspect_project(project_name)
+        allowed_paths = {
+            path.removeprefix(prefix).replace("\\", "/")
+            for path in project_files
+        }
+
+        if normalized_path not in allowed_paths:
+            raise ValueError(
+                f"unsafe repair path: file is not in the existing project: "
+                f"{normalized_path}"
+            )
+
+        # Reject Python syntax errors before writing the repair.
+        if normalized_path.endswith(".py"):
+            import ast
+
+            try:
+                ast.parse(content)
+            except SyntaxError as exc:
+                raise ValueError(
+                    f"Invalid Python repair for {normalized_path}: {exc}"
+                ) from exc
+
         self.edit_project_file(
             project_name,
-            file_path,
-            fix["content"],
+            normalized_path,
+            content,
         )
 
         print("\nCODER: Fix applied.")
@@ -423,6 +758,8 @@ class CoderAgent(BaseAgent):
             "fix": fix,
             "execution": execution_result,
         }
+
+
     async def fix_generated_file(
     self,
     file_path: str,
@@ -490,6 +827,7 @@ class CoderAgent(BaseAgent):
                 prompt=prompt,
                 format="json",
                 temperature=0.1,
+                max_tokens=3000,
             )
 
             try:
@@ -544,12 +882,13 @@ class CoderAgent(BaseAgent):
                     prompt=retry_prompt,
                     format="json",
                     temperature=0.1,
-                    max_tokens=1200,
+                    max_tokens=3000,
                 )
 
                 project = self._parse_project(retry_result)
 
             try:
+                self._ensure_known_requirements(project)
                 self._remove_stdlib_requirements(project)
                 self._validate_project(project)
                 self._validate_flask_consistency(project)
@@ -616,6 +955,7 @@ class CoderAgent(BaseAgent):
                     print("================================\n")
 
                     # Validate the repaired project again.
+                    self._ensure_known_requirements(project)
                     self._remove_stdlib_requirements(project)
                     self._validate_project(project)
                     self._validate_flask_consistency(project)
@@ -701,7 +1041,7 @@ class CoderAgent(BaseAgent):
                         prompt=validation_retry_prompt,
                         format="json",
                         temperature=0.0,
-                        max_tokens=1200,
+                        max_tokens=3000,
                     )
 
                     print("\n===== VALIDATION RETRY OUTPUT =====")
@@ -711,11 +1051,12 @@ class CoderAgent(BaseAgent):
                     project = self._parse_project(
                             validation_retry_result
                             )
+                self._ensure_known_requirements(project)
                 self._remove_stdlib_requirements(project)
                 self._validate_project(project)
                 self._validate_flask_consistency(project)
                 self._validate_flask_routes(project)
-            
+
             workspace_path = self.write_project_to_workspace(project)
 
             # Run the generated application.
@@ -1046,6 +1387,52 @@ The result MUST be a single valid JSON object.
             )
 
         return project
+    def _ensure_known_requirements(
+        self,
+        project: dict[str, Any],
+    ) -> bool:
+        """
+        Add requirements.txt for recognized third-party imports when absent.
+        Existing requirements files are left untouched.
+        Return True if a file was added.
+        """
+        files = project.get("files", [])
+
+        if any(
+            item.get("path", "").replace("\\\\", "/").lower()
+            == "requirements.txt"
+            for item in files
+        ):
+            return False
+
+        imported_modules = set()
+
+        for item in files:
+            if item.get("path", "").lower().endswith(".py"):
+                imported_modules.update(
+                    self._get_python_imports(item.get("content", ""))
+                )
+
+        packages = sorted({
+            PYTHON_PACKAGE_MAP[module]
+            for module in imported_modules
+            if module in PYTHON_PACKAGE_MAP
+        })
+
+        if not packages:
+            return False
+
+        files.append({
+            "path": "requirements.txt",
+            "content": "\n".join(packages) + "\n",
+        })
+
+        print(
+            "CODER: Added requirements.txt for recognized imports: "
+            + ", ".join(packages)
+        )
+        return True
+
     def _remove_stdlib_requirements(
         self,
         project: dict[str, Any],
@@ -1255,7 +1642,7 @@ The result MUST be a single valid JSON object.
                 )
 
 
-        
+
         # README is expected for generated projects.
         has_readme = any(
             file_info["path"].lower() == "readme.md"
@@ -1362,7 +1749,7 @@ The result MUST be a single valid JSON object.
                 f"{sorted(external_packages)} but has no "
                 "requirements.txt"
             )
-    
+
     def _validate_flask_consistency(
         self,
         project: dict[str, Any],

@@ -1,5 +1,6 @@
 import json
 from fastapi import Query
+from backend.agents.boss_agent import _coder_result_context
 
 from fastapi import (
     APIRouter,
@@ -241,13 +242,19 @@ async def run_boss(
         )
 
 
-        result = await application.boss.run(
-            message
+        _coder_result_context.set(None)
+
+        result = await application.boss.run(message)
+
+        coder_result = _coder_result_context.get()
+        artifact_input = (
+            coder_result if coder_result is not None else result
         )
 
         artifact = await persist_coder_artifact(
-                                                    request_id
-                                                )
+            request_id,
+            artifact_input,
+        )
 
         application.event_bus.publish(
                                         event_type="request_completed",
@@ -286,75 +293,44 @@ async def run_boss(
         print(exc)
 async def persist_coder_artifact(
     request_id: str,
+    coder_result,
 ):
-
-    coder_tasks = [
-        task
-        for task
-        in application.task_manager.get_all_tasks()
-        if (
-            task.assigned_to == "coder"
-            and task.status == "completed"
-            and task.result
-        )
-    ]
-
-    if not coder_tasks:
+    if isinstance(coder_result, str):
+        try:
+            project = json.loads(coder_result)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    elif isinstance(coder_result, dict):
+        project = coder_result
+    else:
         return None
 
-    task = coder_tasks[-1]
-
-    try:
-
-        project = json.loads(
-            task.result
-        )
-
-    except (
-        json.JSONDecodeError,
-        TypeError,
-    ):
-
+    if not isinstance(project, dict):
         return None
 
-    if not isinstance(
-        project,
-        dict,
-    ):
+    project_name = project.get("project_name")
+    files = project.get("files")
+
+    if not project_name or not isinstance(files, list):
         return None
 
-    project_name = project.get(
-        "project_name"
-    )
-
-    files = project.get(
-        "files"
-    )
-
-    if (
-        not project_name
-        or not isinstance(files, list)
-    ):
-        return None
-
-    artifact = (
-        application
-        .artifact_manager
-        .create_project(
-            project_name=project_name,
-            files=files,
-            request_id=request_id,
-        )
+    artifact = application.artifact_manager.create_project(
+        project_name=project_name,
+        files=files,
+        request_id=request_id,
     )
     artifact["status"] = project.get("status", "unknown")
 
     execution = project.get("execution") or {}
+    if not isinstance(execution, dict):
+        execution = {}
+
     artifact["execution_summary"] = {
         "return_code": execution.get("return_code"),
         "stdout": execution.get("stdout", ""),
         "stderr": execution.get("stderr", ""),
     }
-    
+
     application.event_bus.publish(
         event_type="artifact_created",
         agent="coder",
@@ -362,6 +338,7 @@ async def persist_coder_artifact(
     )
 
     return artifact
+
 @router.get(
     "/projects/{request_id}"
 )
