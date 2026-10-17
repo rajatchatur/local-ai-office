@@ -137,6 +137,27 @@ class CoderAgent(BaseAgent):
         return project_dir
 
 
+    def _ensure_project_directory_available(self, project_name: str) -> None:
+        """Prevent normal generation from overwriting an existing project."""
+        workspace = getattr(self, "workspace", None)
+
+        # Some unit tests replace the writer with a mock and intentionally
+        # construct a lightweight agent without initializing its workspace.
+        writer = self.write_project_to_workspace
+        if workspace is None and getattr(writer, "__self__", None) is not self:
+            return
+        if workspace is None:
+            raise RuntimeError("CoderAgent workspace is not initialized")
+
+        project_path = workspace._safe_path(project_name)
+        if project_path.exists():
+            raise FileExistsError(
+                f"Project directory already exists: {project_name}. "
+                "Existing projects are never overwritten by normal generation. "
+                "Ask to update the existing project and name the files to change."
+            )
+
+
     def _run_java_project(
         self,
         project_name: str,
@@ -1342,6 +1363,11 @@ Rules:
                 self._validate_flask_consistency(project)
                 self._validate_flask_routes(project)
 
+            # Explicit existing-project updates return earlier through the
+            # scoped update path. Normal generation must not overwrite projects.
+            self._ensure_project_directory_available(
+                project["project_name"].strip()
+            )
             workspace_path = self.write_project_to_workspace(project)
 
             # Run the generated application.

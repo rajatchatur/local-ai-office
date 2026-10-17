@@ -247,3 +247,20 @@ def test_boss_preserves_original_coder_result_when_synthesizing():
         assert all(task.status == "completed" for task in tasks)
 
     asyncio.run(run_test())
+
+def test_boss_routes_readme_update_as_one_complete_coder_task():
+    boss, task_manager, agent_registry, event_bus = make_boss()
+    original_request = (
+        "Add a README to hello_ai_office explaining what the project does "
+        "and how to run main.py. Preserve all existing source files."
+    )
+    boss.agent_registry.get_agent_info = lambda: [
+        {"name": "coder", "role": "Coder Agent", "status": "idle"}
+    ]
+
+    tasks = asyncio.run(boss.create_plan(original_request))
+
+    assert len(tasks) == 1
+    assert tasks[0]["assigned_to"] == "coder"
+    assert original_request in tasks[0]["description"]
+    assert "Preserve all existing source files" in tasks[0]["description"]

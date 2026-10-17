@@ -488,3 +488,26 @@ def test_existing_project_classifier_does_not_capture_new_project_requests(
     )
 
     assert coder._find_existing_project_update(task) is None
+
+def test_normal_generation_rejects_existing_project_directory(tmp_path):
+    coder = object.__new__(CoderAgent)
+    coder.workspace = Workspace(str(tmp_path))
+
+    project_dir = tmp_path / "hello_ai_office"
+    project_dir.mkdir()
+    main_file = project_dir / "main.py"
+    original_source = 'print("original source")\\n'
+    main_file.write_text(original_source, encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="Project directory already exists"):
+        coder._ensure_project_directory_available("hello_ai_office")
+
+    assert main_file.read_text(encoding="utf-8") == original_source
+
+
+def test_normal_generation_allows_new_project_directory(tmp_path):
+    coder = object.__new__(CoderAgent)
+    coder.workspace = Workspace(str(tmp_path))
+
+    coder._ensure_project_directory_available("fresh_project")
+    assert not (tmp_path / "fresh_project").exists()

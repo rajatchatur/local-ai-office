@@ -504,6 +504,46 @@ Return only the answer.
             for agent in available_agents
         )
 
+        # Keep documentation updates together so the planner cannot drop
+        # the existing project name by splitting the request across workers.
+        documentation_update = (
+            any(word in request for word in ("readme", "documentation", "docs"))
+            and any(
+                word in request
+                for word in ("add", "update", "edit", "modify", "write", "document")
+            )
+            and any(
+                phrase in request
+                for phrase in (
+                    "existing project",
+                    "existing application",
+                    "existing app",
+                    "preserve existing source files",
+                    "preserve all existing source files",
+                )
+            )
+        )
+
+        if documentation_update and coder_available:
+            print(
+                "\\nBOSS: Documentation update detected. "
+                "Keeping the complete request in one coder task."
+            )
+            plan = {
+                "tasks": [
+                    {
+                        "description": (
+                            "Update the requested project's documentation only. "
+                            "Preserve all existing source files and follow the user's "
+                            "complete request exactly. Original request: "
+                            + user_request
+                        ),
+                        "assigned_to": "coder",
+                    }
+                ]
+            }
+            return self._parse_plan(json.dumps(plan))
+
         if is_software_request and coder_available:
             print(
                 "\nBOSS: Software request detected. "
