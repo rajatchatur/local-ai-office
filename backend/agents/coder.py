@@ -13,6 +13,9 @@ PYTHON_PACKAGE_MAP = {
     "httpx": "httpx",
     "fastapi": "fastapi",
     "flask": "flask",
+    "flask_restful": "Flask-RESTful",
+    "flask_sqlalchemy": "Flask-SQLAlchemy",
+    "flask_cors": "Flask-Cors",
     "pandas": "pandas",
     "numpy": "numpy",
     "boto3": "boto3",
@@ -102,7 +105,9 @@ class CoderAgent(BaseAgent):
             content,
         )
 
-    def write_project_to_workspace(self, project: dict) -> str:
+    def write_project_to_workspace(
+        self, project: dict, preserve_existing: bool = False
+    ) -> str:
         """
         Write a generated Project to the local workspace.
         """
@@ -119,6 +124,10 @@ class CoderAgent(BaseAgent):
                 )
 
             file_path = f"{project_dir}/{relative_path}"
+
+            if preserve_existing and file_path in set(self.workspace.list_files()):
+                print(f"CODER: Preserving existing file: {file_path}")
+                continue
 
             self.workspace.create_file(
                 file_path,
@@ -804,6 +813,277 @@ class CoderAgent(BaseAgent):
         )
 
         return result.strip()
+    def _find_existing_project_update(self, task: str):
+        """Identify an explicitly named existing project update request."""
+        task_lower = task.casefold()
+
+        # Keep explicit new-project requests in the normal generation flow,
+        # even if they mention an existing project as inspiration.
+        slash = chr(92)
+        new_project_pattern = (
+            slash + r"b(?:create|build|generate|scaffold|start)"
+            + slash + r"s+(?:(?:a|an)" + slash + r"s+)?"
+            + r"(?:new" + slash + r"s+)?(?:project|application|app)"
+            + slash + "b"
+        )
+        if re.search(new_project_pattern, task_lower):
+            return None
+
+        update_intent = re.search(
+            r"\b(add|update|edit|modify|change|document|documentation|readme)\b",
+            task_lower,
+        )
+        if not update_intent:
+            return None
+
+        project_names = sorted(
+            {
+                item.split("/", 1)[0]
+                for item in self.workspace.list_files()
+                if "/" in item
+            },
+            key=len,
+            reverse=True,
+        )
+
+        for name in project_names:
+            if re.search(
+                r"(?<![\w])" + re.escape(name.casefold()) + r"(?![\w])",
+                task_lower,
+            ):
+                docs_only = self._is_docs_only_update(task_lower)
+                return name, docs_only
+
+        return None
+
+    @staticmethod
+    def _is_docs_only_update(task: str) -> bool:
+        """Return true only when the request does not name source files."""
+        if not re.search(r"\b(readme|documentation|docs)\b", task, re.I):
+            return False
+        if re.search(
+            r"\b(source code|application code|implement|refactor)\b",
+            task,
+            re.I,
+        ):
+            return False
+        # A source/configuration filename in the request makes it a
+        # scoped file update, even when the request also mentions a README.
+        if re.search(
+            r"(?<![\w.-])[\w./-]+\.(?:py|pyw|js|jsx|ts|tsx|mjs|cjs|"
+            r"java|kt|go|rs|c|h|cpp|hpp|cs|rb|php|swift|scala|sh|bash|"
+            r"html|css|json|yaml|yml|toml|ini|cfg|env|sql)(?![\w.-])",
+            task,
+            re.I,
+        ):
+            return False
+        return True
+
+    @staticmethod
+    def _validate_update_relative_path(relative_path: str) -> str:
+        """Reject absolute paths, Windows paths, and directory traversal."""
+        if (
+            not isinstance(relative_path, str)
+            or not relative_path
+            or relative_path != relative_path.strip()
+            or "\x00" in relative_path
+            or relative_path.startswith("/")
+            or "\\" in relative_path
+            or ":" in relative_path
+            or any(part in ("", ".", "..") for part in relative_path.split("/"))
+        ):
+            raise ValueError(f"Unsafe existing-project file path: {relative_path!r}")
+        return relative_path
+
+    async def _update_existing_project(self, task: str, project_name: str) -> str:
+        """Update only explicitly permitted files in an existing project."""
+        listed_files = set(self.workspace.list_files())
+        project_prefix = f"{project_name}/"
+        project_files = sorted(
+            item[len(project_prefix):]
+            for item in listed_files
+            if item.startswith(project_prefix) and item != project_prefix
+        )
+
+        if not project_files:
+            raise ValueError(
+                f"Existing project has no files: {project_name}"
+            )
+
+        if (
+            not isinstance(project_name, str)
+            or not project_name
+            or project_name != project_name.strip()
+            or project_name in (".", "..")
+            or "/" in project_name
+            or "\\" in project_name
+            or ":" in project_name
+        ):
+            raise ValueError(f"Invalid existing project name: {project_name!r}")
+
+        project_path = (self.workspace.root / project_name).resolve()
+        if project_path.parent != self.workspace.root or not project_path.is_dir():
+            raise ValueError(f"Invalid existing project directory: {project_name}")
+
+        docs_only = self._is_docs_only_update(task)
+
+        if docs_only:
+            allowed_paths = {"README.md"} if re.search(r"\breadme\b", task, re.I) else set()
+            if not allowed_paths:
+                allowed_paths = {
+                    item for item in project_files
+                    if item.lower().endswith((".md", ".rst", ".txt"))
+                }
+            # A documentation request may create README.md even if it does not exist.
+            if re.search(r"\breadme\b", task, re.I):
+                allowed_paths.add("README.md")
+            instruction = (
+                "DOCUMENTATION-ONLY UPDATE. Return only README.md content "
+                "unless the task explicitly requests another documentation file. "
+                "Never return or modify source code, configuration, or requirements."
+            )
+        else:
+            allowed_paths = {
+                item for item in project_files
+                if re.search(r"(?<![\w])" + re.escape(item) + r"(?![\w])", task, re.I)
+                or re.search(
+                    r"(?<![\w])" + re.escape(item.rsplit("/", 1)[-1]) + r"(?![\w])",
+                    task,
+                    re.I,
+                )
+            }
+            if not allowed_paths:
+                raise ValueError(
+                    "Existing-project update rejected: name the exact existing "
+                    "source file you want to change."
+                )
+            instruction = (
+                "Modify only the explicitly requested existing source file(s). "
+                "Do not add files or change any other file."
+            )
+
+        inventory = "\\n".join(project_files)
+        prompt = f"""
+You are updating an existing project, not creating a new application.
+
+Project name: {project_name}
+User request: {task}
+
+Existing project files:
+{inventory}
+
+{instruction}
+
+Return only a JSON object with this structure:
+{{
+  "project_name": "{project_name}",
+  "summary": "short summary of the update",
+  "files": [
+    {{"path": "README.md", "content": "complete file content"}}
+  ]
+}}
+
+Rules:
+- JSON only, no markdown fences or explanations.
+- Return complete content for each file you intend to update.
+- Use project-relative paths only.
+- Do not return files outside the permitted scope.
+"""
+
+        self.set_status("thinking", {"task": task, "project_name": project_name})
+        raw = await self.llm.generate(
+            prompt=prompt,
+            format="json",
+            temperature=0.0,
+            max_tokens=1800,
+        )
+        project = self._parse_project(raw)
+
+        if project.get("project_name", "").strip() != project_name:
+            raise ValueError("Update response changed the existing project name.")
+
+        files = project.get("files")
+        if not isinstance(files, list) or not files:
+            raise ValueError("Update response must contain a non-empty files list.")
+
+        validated = []
+        seen = set()
+        for item in files:
+            if not isinstance(item, dict):
+                raise ValueError("Every update file must be a JSON object.")
+
+            relative_path = self._validate_update_relative_path(item.get("path"))
+            content = item.get("content")
+            if not isinstance(content, str):
+                raise ValueError(f"Invalid content for update file: {relative_path}")
+            if relative_path in seen:
+                raise ValueError(f"Duplicate update file: {relative_path}")
+            seen.add(relative_path)
+
+            if relative_path not in allowed_paths:
+                raise ValueError(
+                    f"Update rejected: file is outside the permitted scope: "
+                    f"{relative_path}"
+                )
+
+            full_relative_path = f"{project_name}/{relative_path}"
+            if docs_only:
+                if not relative_path.lower().endswith((".md", ".rst", ".txt")):
+                    raise ValueError("Documentation updates may only write documentation files.")
+            elif full_relative_path not in listed_files:
+                raise ValueError(
+                    f"Source update rejected: file does not already exist: "
+                    f"{relative_path}"
+                )
+
+            validated.append({"path": relative_path, "content": content})
+
+        # Validate Python syntax for every proposed source file before
+        # writing any file, so a bad multi-file update cannot partially apply.
+        for item in validated:
+            relative_path = item["path"]
+            if relative_path.lower().endswith((".py", ".pyw")):
+                try:
+                    ast.parse(item["content"], filename=relative_path)
+                except SyntaxError as exc:
+                    raise ValueError(
+                        f"Invalid Python syntax in {relative_path}: {exc.msg}"
+                    ) from exc
+
+        # Validate the entire response before writing any files.
+        for item in validated:
+            full_path = f"{project_name}/{item['path']}"
+            if full_path in listed_files:
+                self.workspace.edit_file(full_path, item["content"])
+            elif docs_only and item["path"] == "README.md":
+                self.workspace.create_file(full_path, item["content"])
+            else:
+                raise ValueError(f"Refusing to create unapproved file: {item['path']}")
+
+        execution = {
+            "return_code": 0,
+            "stdout": "Existing project updated. Application execution was skipped.",
+            "stderr": "",
+        }
+        result = {
+            "project_name": project_name,
+            "summary": project.get("summary", "Updated existing project"),
+            "files": validated,
+            "workspace_path": project_name,
+            "status": "success",
+            "execution": execution,
+        }
+        self.set_status(
+            "idle",
+            {
+                "task": task,
+                "project_name": project_name,
+                "workspace_path": project_name,
+                "execution": execution,
+            },
+        )
+        return json.dumps(result, indent=2, ensure_ascii=False)
+
     async def run(self, task: str) -> str:
         """
         Generate a complete project for the requested task.
@@ -822,6 +1102,11 @@ class CoderAgent(BaseAgent):
         print("===============================\n")
 
         try:
+            existing_update = self._find_existing_project_update(task)
+            if existing_update is not None:
+                project_name, _docs_only_hint = existing_update
+                return await self._update_existing_project(task, project_name)
+
             # First attempt
             result = await self.llm.generate(
                 prompt=prompt,
