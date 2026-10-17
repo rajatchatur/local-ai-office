@@ -189,6 +189,8 @@ def test_readme_update_preserves_existing_source_and_skips_execution(tmp_path):
     main_file = project_dir / "main.py"
     original = 'print("Hello from Local AI Office!")\n'
     main_file.write_text(original, encoding="utf-8")
+    requirements_file = project_dir / "requirements.txt"
+    requirements_file.write_text("flask\n", encoding="utf-8")
 
     coder = make_update_agent(
         tmp_path,
@@ -217,6 +219,17 @@ def test_readme_update_preserves_existing_source_and_skips_execution(tmp_path):
     assert (project_dir / "README.md").read_text(encoding="utf-8") == (
         "# Hello AI Office\n"
     )
+    returned_files = {
+        item["path"]: item["content"]
+        for item in result["files"]
+    }
+
+    assert returned_files["README.md"] == "# Hello AI Office\n"
+    assert returned_files["main.py"] == original
+    assert "requirements.txt" in returned_files
+    assert returned_files["README.md"] == "# Hello AI Office\n"
+    assert returned_files["main.py"] == original
+    assert returned_files["requirements.txt"] == "flask\n"
 
 
 def test_readme_update_rejects_unrequested_source_file(tmp_path):

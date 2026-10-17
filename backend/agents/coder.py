@@ -1086,10 +1086,24 @@ Rules:
             "stdout": "Existing project updated. Application execution was skipped.",
             "stderr": "",
         }
+        # Include the current project files in the artifact snapshot,
+        # including source files that this update did not modify.
+        project_prefix = f"{project_name}/"
+        inspected_files = self.inspect_project(project_name)
+        artifact_files = [
+            {
+                "path": path[len(project_prefix):],
+                "content": content,
+            }
+            for path, content in sorted(inspected_files.items())
+            if path.startswith(project_prefix)
+            and not path.endswith(".failed-generated-backup")
+        ]
+
         result = {
             "project_name": project_name,
             "summary": project.get("summary", "Updated existing project"),
-            "files": validated,
+            "files": artifact_files,
             "workspace_path": project_name,
             "status": "success",
             "execution": execution,
