@@ -1,5 +1,3 @@
-import asyncio
-
 from backend.core.event_bus import AgentEvent
 from backend.api.websocket import websocket_manager
 
@@ -17,12 +15,13 @@ def handle_agent_event(
 
     try:
 
-        loop = asyncio.get_running_loop()
+        from backend.core.application import application
 
-        loop.create_task(
+        application.track_task(
             websocket_manager.broadcast(
                 message
-            )
+            ),
+            name="event_bridge_broadcast",
         )
 
     except RuntimeError:

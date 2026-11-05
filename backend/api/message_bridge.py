@@ -1,5 +1,3 @@
-import asyncio
-
 from backend.core.message_bus import AgentMessage
 from backend.api.websocket import websocket_manager
 
@@ -31,12 +29,13 @@ def handle_agent_message(
 
     try:
 
-        loop = asyncio.get_running_loop()
+        from backend.core.application import application
 
-        loop.create_task(
+        application.track_task(
             websocket_manager.broadcast(
                 payload
-            )
+            ),
+            name="message_bridge_broadcast",
         )
 
     except RuntimeError:

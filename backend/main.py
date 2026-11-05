@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
+from pathlib import Path
 from backend.api.routes import router
 from backend.api.websocket import websocket_endpoint
 
@@ -23,7 +23,7 @@ app.include_router(
 app.mount(
     "/office",
     StaticFiles(
-        directory="frontend/office"
+        directory=str(Path(__file__).resolve().parents[1] / "frontend" / "office")
     ),
     name="office",
 )
@@ -34,6 +34,11 @@ app.websocket(
 )(
     websocket_endpoint
 )
+
+
+@app.on_event("shutdown")
+async def shutdown_background_tasks():
+    await application.shutdown()
 
 
 @app.get("/")

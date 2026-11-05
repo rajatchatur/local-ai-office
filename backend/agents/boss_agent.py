@@ -507,7 +507,8 @@ Return only the answer.
         # Keep documentation updates together so the planner cannot drop
         # the existing project name by splitting the request across workers.
         documentation_update = (
-            any(word in request for word in ("readme", "documentation", "docs"))
+            not is_software_request
+            and any(word in request for word in ("readme", "documentation", "docs"))
             and any(
                 word in request
                 for word in ("add", "update", "edit", "modify", "write", "document")

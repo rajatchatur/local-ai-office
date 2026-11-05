@@ -1,7 +1,10 @@
+import asyncio
 import ast
 import json
+import os
 import re
-import shlex
+import sys
+from pathlib import Path
 from typing import Any
 from backend.agents.base_agent import BaseAgent
 from backend.llm.llama_cpp_client import LlamaCppClient
@@ -90,12 +93,31 @@ class CoderAgent(BaseAgent):
 
         self.message_bus = message_bus
 
+        self._project_locks: dict[str, asyncio.Lock] = {}
+
         self.llm = LlamaCppClient(
             model="qwen3-1.7b"
         )
-        self.workspace = Workspace(
-                "/Users/rajatchatur/Desktop/local-ai-office/workspace"
+        workspace_path = os.getenv("LOCAL_AI_OFFICE_WORKSPACE")
+        if not workspace_path:
+            workspace_path = str(
+                Path(__file__).resolve().parents[2] / "workspace"
             )
+        self.workspace = Workspace(workspace_path)
+
+    def _project_lock(self, project_name: str) -> asyncio.Lock:
+        locks = getattr(self, "_project_locks", None)
+        if locks is None:
+            locks = {}
+            self._project_locks = locks
+
+        lock = locks.get(project_name)
+        if lock is None:
+            lock = asyncio.Lock()
+            locks[project_name] = lock
+
+        return lock
+
     @staticmethod
     def _repair_javascript_newline_separators(content: str) -> str:
         """Repair literal \n separators between recognizable JS statements."""
@@ -221,14 +243,9 @@ class CoderAgent(BaseAgent):
                 ),
             }
 
-        sources = " ".join(
-            shlex.quote(relative_path)
-            for relative_path, _ in java_files
-        )
-
         print("CODER: Compiling Java project...")
         compile_result = self.workspace.run_command(
-            f"javac -d . {sources}",
+            ["javac", "-d", ".", *[path for path, _ in java_files]],
             cwd=project_name,
             timeout=60,
         )
@@ -238,7 +255,7 @@ class CoderAgent(BaseAgent):
 
         print(f"CODER: Running Java class: {main_class}")
         return self.workspace.run_command(
-            f"java -cp . {shlex.quote(main_class)}",
+            ["java", "-cp", ".", main_class],
             cwd=project_name,
             timeout=60,
         )
@@ -305,7 +322,7 @@ class CoderAgent(BaseAgent):
 
         print(f"CODER: Running JavaScript entry point: {entry_point}")
         syntax_result = self.workspace.run_command(
-            f"node --check {shlex.quote(entry_point)}",
+            ["node", "--check", entry_point],
             cwd=project_name,
             timeout=60,
         )
@@ -315,7 +332,7 @@ class CoderAgent(BaseAgent):
 
         print(f"CODER: Executing JavaScript entry point: {entry_point}")
         return self.workspace.run_command(
-            f"node {shlex.quote(entry_point)}",
+            ["node", entry_point],
             cwd=project_name,
             timeout=60,
         )
@@ -346,7 +363,8 @@ class CoderAgent(BaseAgent):
         return result
 
     def _run_project_tests(self, project_name: str) -> dict:
-        """Run pytest only when Python test files exist in this project."""
+        """Run discovered Python tests or an explicit npm test script."""
+        import json
         from pathlib import PurePosixPath
 
         project_files = self.inspect_project(project_name)
@@ -369,35 +387,85 @@ class CoderAgent(BaseAgent):
             if filename.startswith("test_") or filename.endswith("_test.py"):
                 test_files.append(relative_path)
 
-        if not test_files:
+        if test_files:
+            test_files = sorted(set(test_files))
+            test_command = [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                *test_files,
+            ]
+            print(f"CODER: Running {len(test_files)} project test file(s)...")
+            execution = self.workspace.run_command(
+                test_command,
+                cwd=project_name,
+                timeout=120,
+            )
             return {
-                "status": "no_tests",
-                "return_code": 0,
-                "stdout": "",
-                "stderr": "",
-                "test_files": [],
+                "status": "passed" if execution["return_code"] == 0 else "failed",
+                "return_code": execution["return_code"],
+                "stdout": execution["stdout"],
+                "stderr": execution["stderr"],
+                "test_files": test_files,
             }
 
-        import shlex
+        manifest_path = f"{project_name}/package.json"
+        if manifest_path in project_files:
+            try:
+                manifest = json.loads(project_files[manifest_path])
+            except (json.JSONDecodeError, TypeError) as exc:
+                return {
+                    "status": "failed",
+                    "return_code": 1,
+                    "stdout": "",
+                    "stderr": f"Invalid package.json: {exc}",
+                    "test_files": [],
+                }
 
-        test_files = sorted(set(test_files))
-        test_command = "python -m pytest -q " + " ".join(
-            shlex.quote(path) for path in test_files
-        )
+            if not isinstance(manifest, dict):
+                return {
+                    "status": "failed",
+                    "return_code": 1,
+                    "stdout": "",
+                    "stderr": "Invalid package.json: expected a JSON object.",
+                    "test_files": [],
+                }
 
-        print(f"CODER: Running {len(test_files)} project test file(s)...")
-        execution = self.workspace.run_command(
-            test_command,
-            cwd=project_name,
-            timeout=120,
-        )
+            scripts = manifest.get("scripts", {})
+            if not isinstance(scripts, dict):
+                return {
+                    "status": "failed",
+                    "return_code": 1,
+                    "stdout": "",
+                    "stderr": "Invalid package.json: scripts must be an object.",
+                    "test_files": [],
+                }
+
+            test_script = scripts.get("test")
+            if isinstance(test_script, str) and test_script.strip():
+                print("CODER: Running project npm test script...")
+                execution = self.workspace.run_command(
+                    ["npm", "test"],
+                    cwd=project_name,
+                    timeout=120,
+                )
+                return {
+                    "status": (
+                        "passed" if execution["return_code"] == 0 else "failed"
+                    ),
+                    "return_code": execution["return_code"],
+                    "stdout": execution["stdout"],
+                    "stderr": execution["stderr"],
+                    "test_files": ["package.json"],
+                }
 
         return {
-            "status": "passed" if execution["return_code"] == 0 else "failed",
-            "return_code": execution["return_code"],
-            "stdout": execution["stdout"],
-            "stderr": execution["stderr"],
-            "test_files": sorted(test_files),
+            "status": "no_tests",
+            "return_code": 0,
+            "stdout": "",
+            "stderr": "",
+            "test_files": [],
         }
 
     def _run_project_application(self, project_name: str) -> dict:
@@ -441,7 +509,14 @@ class CoderAgent(BaseAgent):
             print("\nCODER: Installing project dependencies...")
 
             install_result = self.workspace.run_command(
-                "python -m pip install -r requirements.txt",
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "-r",
+                    "requirements.txt",
+                ],
                 cwd=project_name,
                 timeout=300,
             )
@@ -456,7 +531,7 @@ class CoderAgent(BaseAgent):
         print("\nCODER: Checking project syntax...")
 
         syntax_result = self.workspace.run_command(
-            "python -m compileall -q .",
+            [sys.executable, "-m", "compileall", "-q", "."],
             cwd=project_name,
             timeout=60,
         )
@@ -528,41 +603,17 @@ class CoderAgent(BaseAgent):
                 "server.server_close()\n"
             )
 
-            import os
-            import subprocess
-            import sys
+            result = self.workspace.run_command(
+                [sys.executable, "-c", startup_script],
+                cwd=project_name,
+                timeout=15,
+            )
 
-            try:
-                result = subprocess.run(
-                    [sys.executable, "-c", startup_script],
-                    cwd=self.workspace._safe_path(project_name),
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
+            if result["return_code"] == 124:
+                result["stderr"] = (
+                    "Flask startup check timed out after 15 seconds."
+                    + (f"\n{result['stderr']}" if result["stderr"] else "")
                 )
-            except subprocess.TimeoutExpired as exc:
-                stdout = exc.stdout or ""
-                stderr = exc.stderr or ""
-
-                if isinstance(stdout, bytes):
-                    stdout = stdout.decode("utf-8", errors="replace")
-                if isinstance(stderr, bytes):
-                    stderr = stderr.decode("utf-8", errors="replace")
-
-                return {
-                    "return_code": 124,
-                    "stdout": stdout,
-                    "stderr": (
-                        "Flask startup check timed out after 15 seconds."
-                        + (f"\n{stderr}" if stderr else "")
-                    ),
-                }
-
-            result = {
-                "return_code": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-            }
 
             if result["return_code"] == 0:
                 print("CODER: Flask startup check passed.")
@@ -577,39 +628,228 @@ class CoderAgent(BaseAgent):
         print("\nCODER: Running project...")
 
         return self.workspace.run_command(
-            f"python {entry_point}",
+            [sys.executable, entry_point],
             cwd=project_name,
             timeout=60,
         )
 
 
 
+    def _repair_missing_test_import(
+        self,
+        project_name: str,
+        execution_result: dict,
+    ) -> tuple[str, str] | None:
+        """Safely add an import for a project symbol missing from a test."""
+        from pathlib import PurePosixPath
+
+        if not isinstance(execution_result, dict):
+            return None
+
+        output_parts = [
+            str(execution_result.get("stderr") or ""),
+            str(execution_result.get("stdout") or ""),
+        ]
+        test_result = execution_result.get("test_result")
+        if isinstance(test_result, dict):
+            output_parts.extend([
+                str(test_result.get("stderr") or ""),
+                str(test_result.get("stdout") or ""),
+            ])
+        output = "\n".join(output_parts)
+
+        # Restrict this fallback to explicit pytest NameError reports.
+        failure = None
+        suffix = " is not defined"
+        marker = ": NameError: name "
+        for line in output.splitlines():
+            if marker not in line or not line.endswith(suffix):
+                continue
+
+            location, reported_name = line.split(marker, 1)
+            if ":" not in location or len(reported_name) <= len(suffix) + 2:
+                continue
+
+            candidate_path, line_number = location.rsplit(":", 1)
+            quote = reported_name[0]
+            if quote not in ("'", '"') or not reported_name.endswith(quote + suffix):
+                continue
+
+            symbol_candidate = reported_name[1:-(len(suffix) + 1)]
+            if (
+                not line_number.isdigit()
+                or not candidate_path.endswith(".py")
+                or not symbol_candidate.isidentifier()
+            ):
+                continue
+
+            failure = (candidate_path, line_number, symbol_candidate)
+            break
+
+        if failure is None:
+            return None
+
+        test_path, _, symbol = failure
+        test_path = test_path.replace("\\", "/")
+        test_path = test_path.removeprefix(f"{project_name}/")
+        test_posix = PurePosixPath(test_path)
+
+        # Permit nested test files but reject absolute paths and traversal.
+        if (
+            test_posix.is_absolute()
+            or ".." in test_posix.parts
+            or not test_posix.name.endswith(".py")
+            or not (
+                test_posix.name.startswith("test_")
+                or test_posix.name.endswith("_test.py")
+            )
+        ):
+            return None
+
+        files = self.inspect_project(project_name)
+        test_key = f"{project_name}/{test_path}"
+        test_content = files.get(test_key)
+        if not isinstance(test_content, str):
+            return None
+
+        try:
+            test_tree = ast.parse(test_content)
+        except SyntaxError:
+            return None
+
+        # Don't interfere if the test already defines or imports the symbol.
+        for node in test_tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name == symbol:
+                    return None
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if (alias.asname or alias.name.split(".")[0]) == symbol:
+                        return None
+            elif isinstance(node, ast.ImportFrom):
+                if any((alias.asname or alias.name) == symbol for alias in node.names):
+                    return None
+            elif isinstance(node, ast.Assign):
+                if any(
+                    isinstance(target, ast.Name) and target.id == symbol
+                    for target in node.targets
+                ):
+                    return None
+
+        # Require exactly one root-level source module defining the symbol.
+        candidates = []
+        for key, content in files.items():
+            if not key.startswith(f"{project_name}/") or not key.endswith(".py"):
+                continue
+            relative = key[len(project_name) + 1:]
+            if relative == test_path or len(PurePosixPath(relative).parts) != 1:
+                continue
+            if PurePosixPath(relative).name.startswith("test_") or PurePosixPath(relative).name.endswith("_test.py"):
+                continue
+            try:
+                tree = ast.parse(content)
+            except SyntaxError:
+                continue
+
+            if any(
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and node.name == symbol
+                for node in tree.body
+            ):
+                candidates.append(PurePosixPath(relative).stem)
+
+        if len(candidates) != 1:
+            return None
+
+        module = candidates[0]
+        import_line = f"from {module} import {symbol}"
+
+        # Avoid duplicate imports, including aliased imports.
+        if import_line in test_content.splitlines():
+            return None
+
+        lines = test_content.splitlines(keepends=True)
+        insertion_index = 0
+
+        # Preserve a module docstring and any future imports.
+        if test_tree.body and isinstance(test_tree.body[0], ast.Expr):
+            value = test_tree.body[0].value
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                insertion_index = getattr(test_tree.body[0], "end_lineno", 1)
+
+        for node in test_tree.body:
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module == "__future__"
+            ):
+                insertion_index = max(
+                    insertion_index, getattr(node, "end_lineno", node.lineno)
+                )
+
+        # Place the new import after the existing leading import block.
+        for node in test_tree.body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                insertion_index = max(
+                    insertion_index, getattr(node, "end_lineno", node.lineno)
+                )
+            elif node.lineno > insertion_index + 1:
+                break
+
+        lines.insert(insertion_index, import_line + "\n")
+        repaired_content = "".join(lines)
+
+        try:
+            ast.parse(repaired_content)
+        except SyntaxError:
+            return None
+
+        print(
+            "CODER: Deterministic test-import repair: "
+            f"{test_path} imports {symbol} from {module}."
+        )
+        return test_path, repaired_content
+
+
     def inspect_project(self, project_name: str) -> dict:
         """
-        Read text files from a generated project.
+        Read generated project text files, excluding caches and environments.
         Skip binary and non-UTF-8 files safely.
         """
-        files = self.workspace.list_files()
+        from pathlib import PurePosixPath
 
-        project_files = [
-            path
-            for path in files
-            if path.startswith(f"{project_name}/")
-        ]
+        ignored_directories = {
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".tox",
+            ".venv",
+            "venv",
+            "env",
+            "site-packages",
+            "node_modules",
+        }
 
+        project_prefix = f"{project_name}/"
         result = {}
 
-        for path in project_files:
+        for path in self.workspace.list_files():
+            if not path.startswith(project_prefix):
+                continue
+
+            relative_path = PurePosixPath(path[len(project_prefix):])
+            if any(
+                part in ignored_directories
+                for part in relative_path.parts[:-1]
+            ):
+                continue
+
             try:
                 result[path] = self.workspace.read_file(path)
             except (UnicodeDecodeError, ValueError):
-                print(
-                    f"CODER: Skipping binary file: {path}"
-                )
+                print(f"CODER: Skipping binary file: {path}")
             except FileNotFoundError:
-                print(
-                    f"CODER: File disappeared during inspection: {path}"
-                )
+                print(f"CODER: File disappeared during inspection: {path}")
 
         return result
 
@@ -654,7 +894,19 @@ class CoderAgent(BaseAgent):
     Project files:
     {json.dumps(files, indent=2)}
 
-    Find the cause of the error.
+    Diagnose the failure using the execution result and the complete
+    project files. Treat test failures as part of the project failure.
+
+    For Python projects:
+    - Read the complete traceback and identify the exact failing file and line.
+    - If a test uses a function or class without defining or importing it,
+      add the correct import from the application module.
+    - Check for NameError, ImportError, ModuleNotFoundError, assertion
+      failures, and incorrect expected values.
+    - Check test modules for missing imports before changing application code.
+    - Preserve tests and application behavior that are already correct.
+    - Make the smallest change that resolves the actual failure.
+    - Ensure the proposed fix addresses the reported error, not just syntax.
 
     Return ONLY valid JSON:
 
@@ -678,45 +930,56 @@ class CoderAgent(BaseAgent):
             max_tokens=1200,
         )
 
-        fix = json.loads(result)
+        try:
+            fix = json.loads(result)
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise ValueError(
+                f"Invalid repair response JSON: {exc}"
+            ) from exc
 
-        return fix
-    async def repair_existing_project(
-        self,
-        project_name: str,
-    ) -> dict:
-        """
-        Run an existing project, diagnose failures,
-        apply an LLM-generated fix, and run it again.
-        """
-
-        print(f"\nCODER: Testing existing project '{project_name}'...")
-
-        execution_result = self.run_project(project_name)
-
-        if execution_result["return_code"] == 0:
-            return {
-                "project_name": project_name,
-                "status": "success",
-                "execution": execution_result,
-            }
-
-        print("\nCODER: Existing project failed.")
-        print(execution_result)
-
-        fix = await self.fix_project(
-            project_name,
-            execution_result,
-        )
-                # Validate the LLM response before accessing its fields.
         if not isinstance(fix, dict):
             raise ValueError("Invalid repair response")
 
-        print("\nCODER: LLM generated fix:")
-        print(fix)
+        return fix
 
+    def _validate_symbol_preservation(
+        self,
+        old_content: str,
+        new_content: str,
+        task: str,
+    ) -> None:
+        if re.search(r"\b(remove|delete)\b", task, re.I):
+            return
 
-        # Validate the LLM-generated repair before modifying any file.
+        try:
+            old_tree = ast.parse(old_content)
+            new_tree = ast.parse(new_content)
+        except SyntaxError:
+            return
+
+        def symbols(tree):
+            return {
+                node.name
+                for node in tree.body
+                if isinstance(
+                    node,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+                )
+            }
+
+        removed = symbols(old_tree) - symbols(new_tree)
+        if removed:
+            raise ValueError(
+                "Repair would remove existing symbols: "
+                + ", ".join(sorted(removed))
+            )
+
+    def _validate_repair(
+        self,
+        project_name: str,
+        fix: dict,
+        task: str = "",
+    ) -> tuple[str, str]:
         if not isinstance(fix, dict):
             raise ValueError("Invalid repair response")
 
@@ -743,7 +1006,6 @@ class CoderAgent(BaseAgent):
         ):
             raise ValueError(f"unsafe repair path: {file_path}")
 
-        # Repairs may modify existing project files only.
         project_files = self.inspect_project(project_name)
         allowed_paths = {
             path.removeprefix(prefix).replace("\\", "/")
@@ -756,10 +1018,7 @@ class CoderAgent(BaseAgent):
                 f"{normalized_path}"
             )
 
-        # Reject Python syntax errors before writing the repair.
         if normalized_path.endswith(".py"):
-            import ast
-
             try:
                 ast.parse(content)
             except SyntaxError as exc:
@@ -767,16 +1026,69 @@ class CoderAgent(BaseAgent):
                     f"Invalid Python repair for {normalized_path}: {exc}"
                 ) from exc
 
-        self.edit_project_file(
-            project_name,
-            normalized_path,
-            content,
-        )
+            self._validate_symbol_preservation(
+                project_files[prefix + normalized_path],
+                content,
+                task,
+            )
 
-        print("\nCODER: Fix applied.")
-        print("CODER: Running project again...")
+        return normalized_path, content
+
+    async def repair_existing_project(
+        self,
+        project_name: str,
+    ) -> dict:
+        """
+        Run an existing project, diagnose failures,
+        apply an LLM-generated fix, and run it again.
+        """
+
+        print(f"\nCODER: Testing existing project '{project_name}'...")
 
         execution_result = self.run_project(project_name)
+
+        if execution_result["return_code"] == 0:
+            return {
+                "project_name": project_name,
+                "status": "success",
+                "execution": execution_result,
+            }
+
+        print("\nCODER: Existing project failed.")
+        print(execution_result)
+
+        repair_attempts = 0
+        fix = None
+
+        while (
+            execution_result["return_code"] != 0
+            and repair_attempts < 2
+        ):
+            repair_attempts += 1
+
+            fix = await self.fix_project(
+                project_name,
+                execution_result,
+            )
+
+            print("\nCODER: LLM generated fix:")
+            print(fix)
+
+            normalized_path, content = self._validate_repair(
+                project_name,
+                fix,
+            )
+
+            self.edit_project_file(
+                project_name,
+                normalized_path,
+                content,
+            )
+
+            print("\nCODER: Fix applied.")
+            print("CODER: Running project again...")
+
+            execution_result = self.run_project(project_name)
 
         return {
             "project_name": project_name,
@@ -786,6 +1098,7 @@ class CoderAgent(BaseAgent):
                 else "failed"
             ),
             "fix": fix,
+            "repair_attempts": repair_attempts,
             "execution": execution_result,
         }
 
@@ -918,6 +1231,17 @@ class CoderAgent(BaseAgent):
 
     async def _update_existing_project(self, task: str, project_name: str) -> str:
         """Update only explicitly permitted files in an existing project."""
+        async with self._project_lock(project_name):
+            return await self._update_existing_project_locked(
+                task,
+                project_name,
+            )
+
+    async def _update_existing_project_locked(
+        self,
+        task: str,
+        project_name: str,
+    ) -> str:
         listed_files = set(self.workspace.list_files())
         project_prefix = f"{project_name}/"
         project_files = sorted(
@@ -1081,11 +1405,25 @@ Rules:
             else:
                 raise ValueError(f"Refusing to create unapproved file: {item['path']}")
 
-        execution = {
-            "return_code": 0,
-            "stdout": "Existing project updated. Application execution was skipped.",
-            "stderr": "",
-        }
+        if docs_only:
+            execution = {
+                "return_code": 0,
+                "stdout": (
+                    "Documentation update applied; execution skipped."
+                ),
+                "stderr": "",
+                "skipped": True,
+                "reason": "documentation_only",
+            }
+        else:
+            execution = self.run_project(project_name)
+
+        result_status = (
+            "success"
+            if execution["return_code"] == 0
+            else "failed"
+        )
+
         # Include the current project files in the artifact snapshot,
         # including source files that this update did not modify.
         project_prefix = f"{project_name}/"
@@ -1105,11 +1443,11 @@ Rules:
             "summary": project.get("summary", "Updated existing project"),
             "files": artifact_files,
             "workspace_path": project_name,
-            "status": "success",
+            "status": result_status,
             "execution": execution,
         }
         self.set_status(
-            "idle",
+            "idle" if result_status == "success" else "failed",
             {
                 "task": task,
                 "project_name": project_name,
@@ -1379,16 +1717,21 @@ Rules:
 
             # Explicit existing-project updates return earlier through the
             # scoped update path. Normal generation must not overwrite projects.
-            self._ensure_project_directory_available(
-                project["project_name"].strip()
-            )
-            workspace_path = self.write_project_to_workspace(project)
+            project_name = project["project_name"].strip()
+            async with self._project_lock(project_name):
+                self._ensure_project_directory_available(project_name)
+                workspace_path = self.write_project_to_workspace(project)
 
             # Run the generated application.
             execution_result = self.run_project(workspace_path)
 
-            # Attempt once repair if execution fails.
-            if execution_result["return_code"] != 0:
+            # Attempt up to two repairs if execution fails.
+            repair_attempts = 0
+            while (
+                execution_result["return_code"] != 0
+                and repair_attempts < 2
+            ):
+                repair_attempts += 1
                 print("\nCODER: Project failed. Asking LLM to fix it...")
 
                 fix = await self.fix_project(
@@ -1396,63 +1739,32 @@ Rules:
                     execution_result,
                 )
 
-                if not isinstance(fix, dict):
-                    raise ValueError("LLM repair response must be a JSON object.")
+                file_path, fixed_content = self._validate_repair(
+                    workspace_path,
+                    fix,
+                    task,
+                )
 
-                file_path = fix.get("file")
-                fixed_content = fix.get("content")
-
-                if not isinstance(file_path, str) or not isinstance(
-                    fixed_content, str
-                ):
-                    raise ValueError(
-                        "LLM repair must contain string fields 'file' and 'content'."
+                # Override an ineffective LLM suggestion only when the test
+                # traceback and project AST prove a unique missing import.
+                deterministic_fix = self._repair_missing_test_import(
+                    workspace_path,
+                    execution_result,
+                )
+                if deterministic_fix is not None:
+                    file_path, fixed_content = deterministic_fix
+                    self._validate_repair(
+                        workspace_path,
+                        {
+                            "file": file_path,
+                            "content": fixed_content,
+                        },
+                        task,
                     )
-
-                # Accept either a project-relative path or a path
-                # prefixed with the project directory.
-                prefix = f"{workspace_path}/"
-                if file_path.startswith(prefix):
-                    file_path = file_path[len(prefix):]
-
-                normalized_path = file_path.replace("\\", "/")
-
-                if (
-                    not normalized_path
-                    or normalized_path.startswith("/")
-                    or "\\" in file_path
-                    or ".." in normalized_path.split("/")
-                ):
-                    raise ValueError(
-                        f"LLM returned an unsafe repair path: {file_path}"
-                    )
-
-                # Only allow edits to files already in this project.
-                existing_files = self.inspect_project(workspace_path)
-                allowed_paths = {
-                    path[len(prefix):]
-                    for path in existing_files
-                    if path.startswith(prefix)
-                }
-
-                if normalized_path not in allowed_paths:
-                    raise ValueError(
-                        f"LLM repair targeted a file outside the project "
-                        f"or a file that does not exist: {file_path}"
-                    )
-
-                # Validate repaired Python syntax before writing it.
-                if normalized_path.endswith(".py"):
-                    try:
-                        ast.parse(fixed_content)
-                    except SyntaxError as exc:
-                        raise ValueError(
-                            f"LLM repair still contains invalid Python syntax: {exc}"
-                        ) from exc
 
                 self.edit_project_file(
                     workspace_path,
-                    normalized_path,
+                    file_path,
                     fixed_content,
                 )
 
@@ -1494,6 +1806,7 @@ Rules:
 
             project["workspace_path"] = workspace_path
             project["execution"] = execution_result
+            project["repair_attempts"] = repair_attempts
             project["status"] = "success" if succeeded else "failed"
 
             return json.dumps(

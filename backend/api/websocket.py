@@ -1,11 +1,36 @@
 from fastapi import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
+import asyncio
 import uuid
+import traceback
 from backend.api.websocket_manager import WebSocketManager
 from backend.agents.boss_agent import _coder_result_context
 # from backend.core.application import application
 
 
 websocket_manager = WebSocketManager()
+
+
+async def safe_send(websocket: WebSocket, payload: dict) -> bool:
+    """
+    Send JSON only while the client is still connected. A request can
+    finish after the browser has gone away; its result is then dropped
+    instead of raising on a closed socket.
+    """
+    if (
+        websocket.application_state != WebSocketState.CONNECTED
+        or websocket.client_state != WebSocketState.CONNECTED
+    ):
+        print("\nWEBSOCKET: Client gone; response not delivered.")
+        return False
+
+    try:
+        await safe_send(websocket, payload)
+        return True
+    except (RuntimeError, WebSocketDisconnect) as exc:
+        print(f"\nWEBSOCKET: Send skipped, connection closed: {exc}")
+        return False
+
 
 
 async def websocket_endpoint(
@@ -28,7 +53,24 @@ async def websocket_endpoint(
             request_id = None
 
             try:
-                message = await websocket.receive_text()
+                # Stop as soon as the socket is no longer open. Without
+                # this, a dead connection re-raises on every loop pass.
+                if (
+                    websocket.application_state != WebSocketState.CONNECTED
+                    or websocket.client_state != WebSocketState.CONNECTED
+                ):
+                    print("\nWEBSOCKET: Connection closed; stopping receive loop.")
+                    break
+
+                try:
+                    message = await websocket.receive_text()
+                except (RuntimeError, WebSocketDisconnect) as exc:
+                    print(
+                        "\nWEBSOCKET: Connection closed; stopping receive loop: "
+                        f"{exc}"
+                    )
+                    break
+
                 print(f"\nWEBSOCKET RECEIVED: {message}")
                 request_id = str(uuid.uuid4())
 
@@ -38,7 +80,7 @@ async def websocket_endpoint(
                     data={"request_id": request_id, "message": message},
                 )
 
-                await websocket.send_json(
+                await safe_send(websocket, 
                     {
                         "event_type": "user_request",
                         "agent": "user",
@@ -47,9 +89,18 @@ async def websocket_endpoint(
                 )
 
                 _coder_result_context.set(None)
-                result = await application.boss.run(message)
 
-                from backend.api.routes import persist_coder_artifact
+                from backend.api.routes import (
+                    _request_timeout,
+                    persist_coder_artifact,
+                )
+
+                request_timeout = _request_timeout()
+
+                result = await asyncio.wait_for(
+                    application.boss.run(message),
+                    timeout=request_timeout,
+                )
 
                 coder_result = _coder_result_context.get()
                 artifact_input = (
@@ -69,7 +120,7 @@ async def websocket_endpoint(
                     },
                 )
 
-                await websocket.send_json(
+                await safe_send(websocket, 
                     {
                         "event_type": "boss_response",
                         "agent": "boss",
@@ -79,6 +130,38 @@ async def websocket_endpoint(
 
             except WebSocketDisconnect:
                 raise
+
+            except asyncio.TimeoutError:
+                error = (
+                    f"Request timed out after "
+                    f"{request_timeout} seconds."
+                )
+
+                if request_id is not None:
+                    application.event_bus.publish(
+                        event_type="request_failed",
+                        agent="boss",
+                        data={
+                            "request_id": request_id,
+                            "error": error,
+                        },
+                    )
+
+                await safe_send(websocket, 
+                    {
+                        "event_type": "boss_response",
+                        "agent": "boss",
+                        "data": {
+                            "message": error,
+                            "error": True,
+                        },
+                    }
+                )
+
+                print(
+                    f"\nWEBSOCKET REQUEST TIMED OUT: "
+                    f"{request_id}"
+                )
 
             except Exception as exc:
                 if request_id is not None:
@@ -95,6 +178,7 @@ async def websocket_endpoint(
                     f"\nWEBSOCKET REQUEST FAILED: "
                     f"{type(exc).__name__}: {exc}"
                 )
+                traceback.print_exc()
 
     except WebSocketDisconnect:
         print("\nWEBSOCKET: Client disconnected normally.")

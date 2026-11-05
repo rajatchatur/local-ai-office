@@ -98,14 +98,16 @@ def test_javascript_timeout_returns_structured_failure(tmp_path):
 
     original_run_command = agent.workspace.run_command
 
-    def short_timeout(command, timeout=60, cwd=None):
-        if command.startswith("node --check "):
+    def short_timeout(command, timeout=60, cwd=None, env=None):
+        argv = command if isinstance(command, list) else command.split()
+
+        if argv[:2] == ["node", "--check"]:
             return original_run_command(
-                command, timeout=timeout, cwd=cwd
+                command, timeout=timeout, cwd=cwd, env=env
             )
 
         return original_run_command(
-            command, timeout=2, cwd=cwd
+            command, timeout=2, cwd=cwd, env=env
         )
 
     agent.workspace.run_command = short_timeout
@@ -115,8 +117,10 @@ def test_javascript_timeout_returns_structured_failure(tmp_path):
     assert result["return_code"] == 124
     assert "timed out" in result["stderr"].lower()
 
-    def simulate_timeout(command, timeout=60, cwd=None):
-        if command.startswith("node --check "):
+    def simulate_timeout(command, timeout=60, cwd=None, env=None):
+        argv = command if isinstance(command, list) else command.split()
+
+        if argv[:2] == ["node", "--check"]:
             return {
                 "return_code": 0,
                 "stdout": "",

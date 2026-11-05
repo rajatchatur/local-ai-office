@@ -2,376 +2,498 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
     <title>Local AI Office</title>
-
-    <link
-        rel="stylesheet"
-        href="/office/office.css"
-    >
-
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d4ed8'/%3E%3Cpath d='M7 26V13l9-6 9 6v13zM12.5 26v-6h7v6' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/office/office.css">
 </head>
-
 
 <body>
 
 <div class="app">
 
-
-    <!-- ================================================= -->
-    <!-- TOP BAR -->
-    <!-- ================================================= -->
+    <!-- ===================================================== -->
+    <!-- TOP BAR                                                -->
+    <!-- ===================================================== -->
 
     <header class="topbar">
 
         <div class="brand">
-
-            <div class="brand-mark">
-                AI
+            <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 27V13l10-7 10 7v14z"/>
+                    <path d="M12.5 27v-7h7v7M12 14h2M18 14h2"/>
+                </svg>
             </div>
-
             <div>
-
-                <div class="brand-title">
-                    Local AI Office
-                </div>
-
-                <div class="brand-subtitle">
-                    Autonomous Agent Workspace
-                </div>
-
+                <div class="brand-title">Local AI Office</div>
+                <div class="brand-subtitle">Autonomous agent workspace</div>
             </div>
-
         </div>
 
+        <div class="topbar-stats">
+            <div class="stat-chip"><span id="stat-agents">0</span> agents</div>
+            <div class="stat-chip"><span id="stat-busy">0</span> busy</div>
+            <div class="stat-chip"><span id="stat-tasks">0</span> tasks</div>
+        </div>
 
         <div class="system-status">
-
-            <span
-                id="connection-dot"
-                class="status-dot"
-            ></span>
-
-            <span id="connection-text">
-                Connecting
-            </span>
-
+            <span id="connection-dot" class="status-dot"></span>
+            <span id="connection-text">Connecting</span>
         </div>
 
     </header>
 
 
-
-    <!-- ================================================= -->
-    <!-- MAIN -->
-    <!-- ================================================= -->
-
     <main class="main-layout">
 
-
-        <!-- ============================================= -->
-        <!-- LEFT SIDEBAR -->
-        <!-- ============================================= -->
+        <!-- ===================================================== -->
+        <!-- LEFT SIDEBAR                                           -->
+        <!-- ===================================================== -->
 
         <aside class="sidebar">
 
+            <nav class="nav" aria-label="Main">
 
-            <div class="nav">
-
-                <div class="nav-item active">
-                    <span>⌂</span>
+                <button class="nav-item active" data-view="office">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
                     Office
-                </div>
+                </button>
 
-                <div class="nav-item">
-                    <span>♙</span>
+                <button class="nav-item" data-view="agents">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2a5 5 0 0 1 4.5 5.3"/></svg>
                     Agents
-                </div>
+                </button>
 
-                <div class="nav-item">
-                    <span>□</span>
+                <button class="nav-item" data-view="tasks">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
                     Tasks
-                </div>
+                </button>
 
-                <div class="nav-item">
-                    <span>⚙</span>
+                <button class="nav-item" data-view="settings">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.6 7.4l2 1.2M17.4 15.4l2 1.2M4.6 16.6l2-1.2M17.4 8.6l2-1.2"/></svg>
                     Settings
-                </div>
+                </button>
 
-            </div>
-
+            </nav>
 
             <div class="sidebar-section">
 
                 <div class="section-heading">
-
                     <span>AGENTS</span>
-
-                    <span
-                        id="agent-count"
-                        class="count"
-                    >
-                        0
-                    </span>
-
+                    <span id="agent-count" class="count">0</span>
                 </div>
 
-
-                <button
-                    id="add-agent-button"
-                    class="add-agent-button"
-                >
-
-                    <span>+</span>
-
-                    Add Agent
-
+                <button id="add-agent-button" class="add-agent-button">
+                    <span>+</span> Add Agent
                 </button>
 
-
-                <div
-                    id="agent-list"
-                    class="agent-list"
-                ></div>
+                <div id="agent-list" class="agent-list"></div>
 
             </div>
 
         </aside>
 
 
-
-        <!-- ============================================= -->
-        <!-- CENTER -->
-        <!-- ============================================= -->
+        <!-- ===================================================== -->
+        <!-- CENTER                                                 -->
+        <!-- ===================================================== -->
 
         <section class="center">
 
+            <!-- ================= OFFICE VIEW ================= -->
 
-            <!-- OFFICE -->
+            <div id="view-office" class="view active">
 
-            <div class="office-shell">
+                <div class="office-shell">
 
-                <div class="office-title">
-
-                    <div>
-
-                        <strong>
-                            OFFICE FLOOR
-                        </strong>
-
-                        <span>
-                            LIVE
-                        </span>
-
+                    <div class="office-title">
+                        <div class="office-title-left">
+                            <strong>OFFICE FLOOR</strong>
+                            <span class="live-pill"><i></i> LIVE</span>
+                        </div>
+                        <div class="legend">
+                            <span><i class="dot idle"></i>Idle</span>
+                            <span><i class="dot thinking"></i>Thinking</span>
+                            <span><i class="dot working"></i>Working</span>
+                            <span><i class="dot failed"></i>Failed</span>
+                        </div>
                     </div>
 
-                    <div class="office-hint">
-                        Agent movement is driven by live events
+                    <div id="office" class="office">
+                        <div id="stage" class="stage">
+
+                            <!-- ============ ILLUSTRATED SCENE ============ -->
+                            <svg class="scene" viewBox="0 0 1080 660" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <defs>
+                                    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0" stop-color="#efe6d6"/>
+                                        <stop offset="1" stop-color="#d8cbb4"/>
+                                    </linearGradient>
+                                    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0" stop-color="#7fb4ea"/>
+                                        <stop offset="1" stop-color="#d7ecfb"/>
+                                    </linearGradient>
+                                    <linearGradient id="floorShade" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0" stop-color="#000" stop-opacity=".28"/>
+                                        <stop offset=".25" stop-color="#000" stop-opacity="0"/>
+                                        <stop offset="1" stop-color="#000" stop-opacity=".22"/>
+                                    </linearGradient>
+                                    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0" stop-color="#fff6d6" stop-opacity=".55"/>
+                                        <stop offset="1" stop-color="#fff6d6" stop-opacity="0"/>
+                                    </linearGradient>
+                                    <radialGradient id="vignette" cx=".5" cy=".5" r=".75">
+                                        <stop offset=".55" stop-color="#000" stop-opacity="0"/>
+                                        <stop offset="1" stop-color="#1b1208" stop-opacity=".42"/>
+                                    </radialGradient>
+                                    <radialGradient id="lampGlow" cx=".5" cy=".5" r=".5">
+                                        <stop offset="0" stop-color="#ffe9a8" stop-opacity=".55"/>
+                                        <stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/>
+                                    </radialGradient>
+                                    <radialGradient id="glowGrad" cx=".5" cy=".5" r=".5">
+                                        <stop offset="0" stop-color="#9fd2ff" stop-opacity=".75"/>
+                                        <stop offset="1" stop-color="#9fd2ff" stop-opacity="0"/>
+                                    </radialGradient>
+                                    <pattern id="planks" width="180" height="40" patternUnits="userSpaceOnUse">
+                                        <rect width="180" height="20" fill="#b58759"/>
+                                        <rect y="20" width="180" height="20" fill="#aa7d51"/>
+                                        <path d="M0 .5H180M0 20.5H180" stroke="#000" stroke-opacity=".2"/>
+                                        <path d="M45 0V20M135 20V40" stroke="#000" stroke-opacity=".16"/>
+                                        <path d="M0 3H180M0 23H180" stroke="#fff" stroke-opacity=".07"/>
+                                    </pattern>
+                                    <pattern id="wallStripes" width="36" height="10" patternUnits="userSpaceOnUse">
+                                        <rect width="36" height="10" fill="none"/>
+                                        <path d="M0 0V10" stroke="#fff" stroke-opacity=".18" stroke-width="2"/>
+                                    </pattern>
+                                </defs>
+
+                                <!-- back wall -->
+                                <rect width="1080" height="212" fill="url(#wallGrad)"/>
+                                <rect width="1080" height="140" fill="url(#wallStripes)"/>
+                                <!-- wainscot -->
+                                <rect y="140" width="1080" height="72" fill="#7f8fab"/>
+                                <rect y="140" width="1080" height="6" fill="#a9b6cc"/>
+                                <rect y="146" width="1080" height="3" fill="#000" opacity=".12"/>
+                                <g stroke="#000" stroke-opacity=".13" stroke-width="2">
+                                    <path d="M90 156V204M270 156V204M450 156V204M630 156V204M810 156V204M990 156V204"/>
+                                </g>
+                                <!-- baseboard -->
+                                <rect y="204" width="1080" height="10" fill="#f4eee2"/>
+                                <rect y="212" width="1080" height="3" fill="#000" opacity=".25"/>
+
+                                <!-- floor -->
+                                <rect y="214" width="1080" height="446" fill="url(#planks)"/>
+                                <rect y="214" width="1080" height="446" fill="url(#floorShade)"/>
+
+                                <!-- window light beams on floor -->
+                                <g class="beams">
+                                    <polygon points="62,214 168,214 250,420 120,420" fill="url(#beam)"/>
+                                    <polygon points="912,214 1018,214 1000,430 870,430" fill="url(#beam)"/>
+                                </g>
+
+                                <!-- windows -->
+                                <g>
+                                    <g transform="translate(52 34)">
+                                        <rect width="124" height="104" rx="4" fill="#f4eee2"/>
+                                        <rect x="8" y="8" width="108" height="88" fill="url(#skyGrad)"/>
+                                        <ellipse cx="40" cy="38" rx="20" ry="7" fill="#fff" opacity=".85"/>
+                                        <ellipse cx="58" cy="34" rx="14" ry="6" fill="#fff" opacity=".85"/>
+                                        <path d="M8 96V74l18-10 20 14 22-20 28 18v20z" fill="#6c8fb3" opacity=".5"/>
+                                        <path d="M62 8V96M8 52H116" stroke="#f4eee2" stroke-width="5"/>
+                                        <rect y="100" width="124" height="8" rx="2" fill="#e6dccb"/>
+                                    </g>
+                                    <g transform="translate(904 34)">
+                                        <rect width="124" height="104" rx="4" fill="#f4eee2"/>
+                                        <rect x="8" y="8" width="108" height="88" fill="url(#skyGrad)"/>
+                                        <ellipse cx="82" cy="34" rx="22" ry="7" fill="#fff" opacity=".85"/>
+                                        <ellipse cx="98" cy="40" rx="12" ry="5" fill="#fff" opacity=".85"/>
+                                        <path d="M8 96V78l24-14 22 16 20-14 42 20v14z" fill="#6c8fb3" opacity=".5"/>
+                                        <path d="M62 8V96M8 52H116" stroke="#f4eee2" stroke-width="5"/>
+                                        <rect y="100" width="124" height="8" rx="2" fill="#e6dccb"/>
+                                    </g>
+                                </g>
+
+                                <!-- sprint board -->
+                                <g transform="translate(206 40)">
+                                    <rect width="148" height="96" rx="5" fill="#b9bfc9"/>
+                                    <rect x="5" y="5" width="138" height="86" rx="3" fill="#fbfcfd"/>
+                                    <text x="14" y="23" font-family="Inter,system-ui,sans-serif" font-size="9.5" font-weight="700" letter-spacing="1.4" fill="#5b6675">SPRINT BOARD</text>
+                                    <rect x="14" y="32" width="36" height="28" rx="2" fill="#ffd966" transform="rotate(-3 32 46)"/>
+                                    <rect x="56" y="30" width="36" height="28" rx="2" fill="#8ed1a5" transform="rotate(2 74 44)"/>
+                                    <rect x="98" y="33" width="36" height="28" rx="2" fill="#f3a6b8" transform="rotate(-2 116 47)"/>
+                                    <path d="M19 42h22M19 48h16M61 40h22M61 46h14M103 43h22M103 49h18" stroke="#000" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>
+                                    <text id="board-count" x="14" y="80" font-family="Inter,system-ui,sans-serif" font-size="10" font-weight="600" fill="#2f6fd6">0 tasks today</text>
+                                    <rect x="52" y="91" width="44" height="5" rx="2" fill="#9aa2ae"/>
+                                </g>
+
+                                <!-- framed art -->
+                                <g transform="translate(398 46)">
+                                    <rect width="62" height="48" rx="3" fill="#6b4a2f"/>
+                                    <rect x="4" y="4" width="54" height="40" fill="#f3ead8"/>
+                                    <circle cx="22" cy="20" r="7" fill="#e8895a"/>
+                                    <path d="M4 44V32l18-10 14 8 22-12v26z" fill="#4c7a7a"/>
+                                </g>
+                                <g transform="translate(620 46)">
+                                    <rect width="62" height="48" rx="3" fill="#6b4a2f"/>
+                                    <rect x="4" y="4" width="54" height="40" fill="#f3ead8"/>
+                                    <path d="M12 36q10-26 20-6t18-18" fill="none" stroke="#2f6fd6" stroke-width="3" stroke-linecap="round"/>
+                                    <circle cx="46" cy="14" r="4" fill="#f2b84b"/>
+                                </g>
+
+                                <!-- wall clock (hands animated by JS) -->
+                                <g>
+                                    <circle cx="540" cy="70" r="27" fill="#6b4a2f"/>
+                                    <circle cx="540" cy="70" r="23" fill="#fffdf8"/>
+                                    <g stroke="#3b3f46" stroke-width="2" stroke-linecap="round">
+                                        <path d="M540 50.5v4M540 85.5v4M520.5 70h4M555.5 70h4"/>
+                                    </g>
+                                    <line id="clock-hour" x1="540" y1="70" x2="540" y2="58" stroke="#252a32" stroke-width="3.2" stroke-linecap="round"/>
+                                    <line id="clock-minute" x1="540" y1="70" x2="540" y2="52" stroke="#252a32" stroke-width="2.2" stroke-linecap="round"/>
+                                    <circle cx="540" cy="70" r="2.6" fill="#d9534f"/>
+                                </g>
+
+                                <!-- bookshelf -->
+                                <g transform="translate(738 52)">
+                                    <rect width="132" height="160" rx="3" fill="#7a5436"/>
+                                    <rect x="6" y="6" width="120" height="148" fill="#5e3f27"/>
+                                    <rect x="6" y="52" width="120" height="5" fill="#8a6342"/>
+                                    <rect x="6" y="100" width="120" height="5" fill="#8a6342"/>
+                                    <g>
+                                        <rect x="12" y="20" width="9" height="32" fill="#d9534f"/><rect x="22" y="14" width="10" height="38" fill="#2f6fd6"/>
+                                        <rect x="33" y="24" width="8" height="28" fill="#f2b84b"/><rect x="42" y="18" width="11" height="34" fill="#4fd1a1"/>
+                                        <rect x="54" y="26" width="8" height="26" fill="#9b6bd6"/>
+                                        <rect x="76" y="22" width="10" height="30" fill="#e8895a"/><rect x="87" y="16" width="9" height="36" fill="#3d9aa8"/>
+                                        <rect x="97" y="24" width="11" height="28" fill="#c7d2e0"/>
+                                        <rect x="12" y="68" width="12" height="32" fill="#3d9aa8"/><rect x="25" y="62" width="9" height="38" fill="#f3a6b8"/>
+                                        <rect x="35" y="70" width="10" height="30" fill="#2f6fd6"/>
+                                        <rect x="70" y="66" width="10" height="34" fill="#f2b84b"/><rect x="81" y="72" width="9" height="28" fill="#d9534f"/>
+                                        <rect x="91" y="64" width="12" height="36" fill="#4fd1a1"/>
+                                        <rect x="12" y="116" width="10" height="38" fill="#e8895a"/><rect x="23" y="122" width="9" height="32" fill="#9b6bd6"/>
+                                        <rect x="33" y="114" width="11" height="40" fill="#c7d2e0"/><rect x="45" y="120" width="8" height="34" fill="#d9534f"/>
+                                    </g>
+                                    <circle cx="96" cy="130" r="10" fill="#e9eef5"/>
+                                    <path d="M92 130h8M96 126v8" stroke="#5b6675" stroke-width="1.6" transform="rotate(25 96 130)"/>
+                                </g>
+
+                                <!-- boss rug + lamp glow -->
+                                <g>
+                                    <ellipse cx="540" cy="340" rx="190" ry="26" fill="#000" opacity=".14"/>
+                                    <rect x="372" y="228" width="336" height="148" rx="14" fill="#2f3f66"/>
+                                    <rect x="382" y="238" width="316" height="128" rx="9" fill="none" stroke="#c9a85c" stroke-width="2.5"/>
+                                    <rect x="394" y="250" width="292" height="104" rx="6" fill="none" stroke="#c9a85c" stroke-opacity=".5" stroke-width="1.5" stroke-dasharray="3 6"/>
+                                    <text x="540" y="368" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="700" letter-spacing="3" fill="#c9a85c" opacity=".8">MANAGER OFFICE</text>
+                                    <ellipse cx="716" cy="300" rx="60" ry="46" fill="url(#lampGlow)"/>
+                                </g>
+
+                                <!-- floor lamp -->
+                                <g transform="translate(724 196)">
+                                    <ellipse cx="0" cy="104" rx="16" ry="5" fill="#000" opacity=".25"/>
+                                    <rect x="-2" y="26" width="4" height="78" fill="#4a4f59"/>
+                                    <path d="M-16 28L-9 0h18l7 28z" fill="#f4e3b0"/>
+                                    <path d="M-16 28L-9 0h18l7 28z" fill="#fff" opacity=".25"/>
+                                </g>
+
+                                <!-- potted plants -->
+                                <g transform="translate(40 232)">
+                                    <ellipse cx="0" cy="92" rx="30" ry="7" fill="#000" opacity=".25"/>
+                                    <path d="M-22 56h44l-6 38h-32z" fill="#c9693e"/>
+                                    <rect x="-24" y="52" width="48" height="9" rx="3" fill="#dd7e50"/>
+                                    <g fill="#3f9a63">
+                                        <path d="M0 52C-8 30-30 26-34 6c18 0 32 16 34 46z"/>
+                                        <path d="M0 52C8 26 32 22 36 2c-20 2-34 22-36 50z" fill="#2f8553"/>
+                                        <path d="M0 52C-2 28 4 10 0-8c-10 16-12 36 0 60z" fill="#4cb07a"/>
+                                    </g>
+                                </g>
+                                <g transform="translate(1040 236)">
+                                    <ellipse cx="0" cy="92" rx="30" ry="7" fill="#000" opacity=".25"/>
+                                    <path d="M-22 56h44l-6 38h-32z" fill="#e8e1d2"/>
+                                    <rect x="-24" y="52" width="48" height="9" rx="3" fill="#f4eee2"/>
+                                    <g fill="#3f9a63">
+                                        <path d="M0 52C-10 36-28 34-34 14c20 2 32 14 34 38z"/>
+                                        <path d="M0 52C10 34 28 30 34 8c-20 4-32 18-34 44z" fill="#2f8553"/>
+                                        <path d="M0 52C-4 30 6 14 2-2c-12 14-14 32-2 54z" fill="#4cb07a"/>
+                                    </g>
+                                </g>
+
+                                <!-- soft vignette -->
+                                <rect id="vignette-rect" width="1080" height="660" fill="url(#vignette)"/>
+                            </svg>
+
+                            <!-- dynamic layers -->
+                            <div id="desk-layer" class="desk-layer"></div>
+                            <div id="agent-layer" class="agent-layer"></div>
+                            <div id="message-layer" class="message-layer"></div>
+
+                        </div>
                     </div>
 
                 </div>
 
 
-                <div
-                    id="office"
-                    class="office"
-                >
+                <div class="bottom-grid">
 
-                    <div class="wall back-wall"></div>
+                    <!-- CHAT -->
+                    <section class="panel chat-panel">
 
-                    <div class="window window-one"></div>
+                        <div class="panel-title">Talk to Boss</div>
 
-                    <div class="window window-two"></div>
+                        <div class="chat-box">
 
-
-                    <div class="floor-grid"></div>
-
-
-                    <div class="boss-room">
-
-                        <div class="room-label">
-                            BOSS
-                        </div>
-
-                        <div class="boss-desk">
-
-                            <div class="desk-top"></div>
-
-                            <div class="desk-leg left"></div>
-
-                            <div class="desk-leg right"></div>
-
-                            <div class="monitor">
-
-                                <div class="screen">
+                            <div id="boss-response" class="boss-response">
+                                <div class="boss-response-label">
+                                    <span>BOSS</span>
+                                    <span id="boss-typing" class="typing hidden"><i></i><i></i><i></i></span>
                                 </div>
+                                <div id="boss-response-text">Waiting for your request...</div>
+                            </div>
 
+                            <div id="quick-prompts" class="quick-prompts">
+                                <button type="button" data-prompt="Build a simple Flask to-do list app with add and delete.">Build a Flask app</button>
+                                <button type="button" data-prompt="Research the pros and cons of running LLMs locally.">Research local LLMs</button>
+                                <button type="button" data-prompt="Analyze the trade-offs between SQLite and PostgreSQL.">Analyze databases</button>
+                            </div>
+
+                            <div class="composer">
+                                <textarea
+                                    id="chat-input"
+                                    placeholder="Give a task to the team or ask a question..."
+                                ></textarea>
+                                <button id="send-button" class="send-button" aria-label="Send">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg>
+                                </button>
                             </div>
 
                         </div>
 
-                    </div>
+                    </section>
 
+                    <!-- WORKSPACE -->
+                    <section class="panel workspace-panel">
+                        <div class="panel-title">Project Workspace</div>
+                        <div id="selected-agent-label" class="workspace-subtitle">
+                            Waiting for a generated project...
+                        </div>
+                        <div id="workspace" class="workspace-content">
+                            <div class="empty-workspace">
+                                Generated projects and files will appear here.
+                            </div>
+                        </div>
+                    </section>
 
-                    <div
-                        id="desk-layer"
-                        class="desk-layer"
-                    ></div>
-
-
-                    <div
-                        id="agent-layer"
-                        class="agent-layer"
-                    ></div>
-
-
-                    <div
-                        id="message-layer"
-                        class="message-layer"
-                    ></div>
+                    <!-- TASKS -->
+                    <section class="panel tasks-panel">
+                        <div class="panel-title">Current Tasks</div>
+                        <div id="task-list" class="task-list"></div>
+                    </section>
 
                 </div>
 
             </div>
 
 
+            <!-- ================= AGENTS VIEW ================= -->
 
-            <!-- BOTTOM AREA -->
-
-            <div class="bottom-grid">
-
-
-                <!-- CHAT -->
-
-                <section class="panel chat-panel">
-
-                    <div class="panel-title">
-                        Talk to Boss
+            <div id="view-agents" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Agents</h2>
+                        <p>Everyone on your team. Click a card to inspect them in the office.</p>
                     </div>
+                    <button id="add-agent-button-2" class="primary-button">+ Add Agent</button>
+                </div>
+                <div id="agents-grid" class="agents-grid"></div>
+            </div>
 
-                    <div class="chat-box">
-                        <div id="boss-response" class="boss-response">
-                            <div class="boss-response-label">BOSS</div>
-                            <div id="boss-response-text">
-                                Waiting for your request...
-                            </div>
-                        </div>
 
-                        <textarea
-                            id="chat-input"
-                            placeholder="Give a task to the team or ask a question..."
-                        ></textarea>
+            <!-- ================= TASKS VIEW ================= -->
 
-                        <button
-                            id="send-button"
-                            class="send-button"
-                        >
-                            ➤
-                        </button>
-
+            <div id="view-tasks" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Task history</h2>
+                        <p>Every task the Boss has delegated in this session.</p>
                     </div>
-
-                </section>
-
-
-
-                <!-- TASKS -->
-
-                <!-- WORKSPACE -->
-
-                <section class="panel workspace-panel">
-                    <div class="panel-title">
-                        Project Workspace
+                    <div class="task-filters" id="task-filters">
+                        <button class="chip active" data-filter="all">All</button>
+                        <button class="chip" data-filter="assigned">In progress</button>
+                        <button class="chip" data-filter="done">Done</button>
+                        <button class="chip" data-filter="failed">Failed</button>
                     </div>
-                    <div
-                        id="selected-agent-label"
-                        class="workspace-subtitle"
-                    >
-                        Waiting for a generated project...
+                </div>
+                <div id="task-history" class="task-history"></div>
+            </div>
+
+
+            <!-- ================= SETTINGS VIEW ================= -->
+
+            <div id="view-settings" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Settings</h2>
+                        <p>Display preferences are saved in this browser.</p>
                     </div>
-                    <div id="workspace" class="workspace-content">
-                        <div class="empty-workspace">
-                            Generated projects and files will appear here.
-                        </div>
-                    </div>
-                </section>
+                </div>
 
-                <!-- TASKS -->
+                <div class="settings-grid">
 
-                <section class="panel">
-                    <div class="panel-title">
-                        Current Tasks
-                    </div>
-                    <div
-                        id="task-list"
-                        class="task-list"
-                    ></div>
-                </section>
+                    <section class="panel settings-card">
+                        <div class="panel-title">Display</div>
+                        <label class="toggle">
+                            <input type="checkbox" id="opt-reduce-motion">
+                            <span class="toggle-ui"></span>
+                            <span>Reduce motion<small>Stops idle and walking animations.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="opt-name-tags" checked>
+                            <span class="toggle-ui"></span>
+                            <span>Show name tags<small>Floating labels above each agent.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" id="opt-lighting" checked>
+                            <span class="toggle-ui"></span>
+                            <span>Soft lighting<small>Window light beams and vignette.</small></span>
+                        </label>
+                    </section>
+
+                    <section class="panel settings-card">
+                        <div class="panel-title">Backend</div>
+                        <dl class="kv">
+                            <dt>API status</dt><dd id="set-health">checking…</dd>
+                            <dt>WebSocket</dt><dd id="set-ws">—</dd>
+                            <dt>Endpoint</dt><dd id="set-endpoint">—</dd>
+                            <dt>Agents loaded</dt><dd id="set-agents">0</dd>
+                        </dl>
+                        <button id="recheck-health" class="secondary-button">Re-check</button>
+                    </section>
+
+                </div>
+            </div>
+
+        </section>
 
 
-
-
-        <!-- ============================================= -->
-        <!-- RIGHT SIDEBAR -->
-        <!-- ============================================= -->
+        <!-- ===================================================== -->
+        <!-- RIGHT SIDEBAR                                          -->
+        <!-- ===================================================== -->
 
         <aside class="right-sidebar">
 
-
             <section class="panel activity-panel">
-
                 <div class="panel-heading">
-
-                    <span>
-                        Activity Log
-                    </span>
-
-                    <span class="live-label">
-                        ● Real-time
-                    </span>
-
+                    <span>Activity Log</span>
+                    <span class="live-label">● Real-time</span>
                 </div>
-
-
-                <div
-                    id="activity-log"
-                    class="activity-log"
-                ></div>
-
+                <div id="activity-log" class="activity-log"></div>
             </section>
 
-
-
-            <section
-                id="inspector"
-                class="panel inspector"
-            >
-
-                <div class="panel-heading">
-                    Agent Inspector
+            <section id="inspector" class="panel inspector">
+                <div class="panel-heading">Agent Inspector</div>
+                <div id="inspector-content" class="inspector-content">
+                    <div class="empty-inspector">Select an agent to inspect it.</div>
                 </div>
-
-
-                <div
-                    id="inspector-content"
-                    class="inspector-content"
-                >
-
-                    <div class="empty-inspector">
-
-                        Select an agent to inspect it.
-
-                    </div>
-
-                </div>
-
             </section>
 
         </aside>
@@ -379,102 +501,47 @@
     </main>
 
 
+    <!-- ===================================================== -->
+    <!-- ADD AGENT MODAL                                        -->
+    <!-- ===================================================== -->
 
-    <!-- ================================================= -->
-    <!-- ADD AGENT MODAL -->
-    <!-- ================================================= -->
+    <div id="modal-backdrop" class="modal-backdrop hidden">
 
-    <div
-        id="modal-backdrop"
-        class="modal-backdrop hidden"
-    >
-
-        <div class="modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
 
             <div class="modal-header">
-
                 <div>
-
-                    <div class="modal-title">
-                        Add Agent
-                    </div>
-
-                    <div class="modal-subtitle">
-                        Create a new local AI worker
-                    </div>
-
+                    <div class="modal-title" id="modal-title">Add Agent</div>
+                    <div class="modal-subtitle">Create a new local AI worker</div>
                 </div>
-
-                <button
-                    id="close-modal"
-                    class="close-button"
-                >
-                    ×
-                </button>
-
+                <button id="close-modal" class="close-button" aria-label="Close">×</button>
             </div>
 
+            <label for="agent-name">Name</label>
+            <input id="agent-name" placeholder="data_engineer" autocomplete="off">
 
-            <label>
-                Name
-            </label>
+            <label for="agent-role">Role</label>
+            <input id="agent-role" placeholder="Data Engineering" autocomplete="off">
 
-            <input
-                id="agent-name"
-                placeholder="data_engineer"
-            >
+            <label for="agent-instructions">Instructions</label>
+            <textarea id="agent-instructions" placeholder="Build and review data pipelines..."></textarea>
 
-
-            <label>
-                Role
-            </label>
-
-            <input
-                id="agent-role"
-                placeholder="Data Engineering"
-            >
-
-
-            <label>
-                Instructions
-            </label>
-
-            <textarea
-                id="agent-instructions"
-                placeholder="Build and review data pipelines..."
-            ></textarea>
-
+            <div id="modal-error" class="modal-error hidden"></div>
 
             <div class="modal-actions">
-
-                <button
-                    id="cancel-agent"
-                    class="secondary-button"
-                >
-                    Cancel
-                </button>
-
-                <button
-                    id="create-agent"
-                    class="primary-button"
-                >
-                    Add Agent
-                </button>
-
+                <button id="cancel-agent" class="secondary-button">Cancel</button>
+                <button id="create-agent" class="primary-button">Add Agent</button>
             </div>
 
         </div>
 
     </div>
 
+    <div id="toast" class="toast hidden" role="status"></div>
 
 </div>
 
-
-<script
-    src="/office/office.js"
-></script>
+<script src="/office/office.js"></script>
 
 </body>
-
 </html>

@@ -1,3 +1,5 @@
+import asyncio
+
 from backend.core.task_manager import TaskManager
 from backend.core.agent_registry import AgentRegistry
 from backend.core.message_bus import MessageBus
@@ -30,6 +32,8 @@ class Application:
         self.event_bus = EventBus()
 
         self.artifact_manager = ArtifactManager()
+
+        self.background_tasks: set[asyncio.Task] = set()
 
 
         # Event → WebSocket
@@ -94,6 +98,48 @@ class Application:
         print(
             "LOCAL AI OFFICE READY."
         )
+
+
+    # ====================================================
+    # BACKGROUND TASKS
+    # ====================================================
+
+    def track_task(
+        self,
+        coro,
+        name: str | None = None,
+    ) -> asyncio.Task:
+
+        task = asyncio.create_task(
+            coro,
+            name=name,
+        )
+
+        self.background_tasks.add(task)
+
+        task.add_done_callback(
+            self.background_tasks.discard
+        )
+
+        return task
+
+
+    async def shutdown(self) -> None:
+
+        tasks = [
+            task
+            for task in self.background_tasks
+            if not task.done()
+        ]
+
+        for task in tasks:
+            task.cancel()
+
+        if tasks:
+            await asyncio.gather(
+                *tasks,
+                return_exceptions=True,
+            )
 
 
     # ====================================================

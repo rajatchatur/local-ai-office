@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task</title>
+</head>
+<body>
+    <h1>Task: {{ task.description }}</h1>
+    <form method="POST" action="{{ url_for('complete_task') }}">
+        <button type="submit">Complete</button>
+    </form>
+    <form method="POST" action="{{ url_for('delete_task') }}">
+        <button type="submit">Delete</button>
+    </form>
+</body>
+</html>

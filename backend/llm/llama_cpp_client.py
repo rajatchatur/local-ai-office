@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import Optional
 
 import httpx
@@ -20,11 +21,17 @@ class LlamaCppClient:
 
     def __init__(
         self,
-        model: str = "qwen3-1.7b",
-        base_url: str = "http://127.0.0.1:8000",
+        model: str = "qwen3.5-4b",
+        base_url: Optional[str] = None,
     ):
         self.model = model
-        self.base_url = base_url.rstrip("/")
+        configured_base_url = (
+            base_url
+            if base_url is not None
+            else os.getenv("LOCAL_AI_OFFICE_LLM_BASE_URL")
+            or "http://127.0.0.1:8000"
+        )
+        self.base_url = configured_base_url.rstrip("/")
 
         # Serialize requests because the Mac has limited RAM.
         self._semaphore = asyncio.Semaphore(1)

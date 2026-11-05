@@ -1,8 +1,7 @@
 import sys
-import subprocess
-from unittest.mock import patch
 
 from backend.agents.coder import CoderAgent
+
 
 def test_flask_startup_timeout_returns_structured_error(tmp_path):
     agent = object.__new__(CoderAgent)
@@ -10,7 +9,24 @@ def test_flask_startup_timeout_returns_structured_error(tmp_path):
     class FakeWorkspace:
         def _safe_path(self, project_name):
             return str(tmp_path)
-        def run_command(self, command, timeout=60, cwd=None):
+
+        def run_command(
+            self,
+            command,
+            timeout=60,
+            cwd=None,
+            env=None,
+        ):
+            if (
+                isinstance(command, list)
+                and command[:2] == [sys.executable, "-c"]
+            ):
+                return {
+                    "return_code": 124,
+                    "stdout": "startup output",
+                    "stderr": "startup diagnostic",
+                }
+
             return {
                 "return_code": 0,
                 "stdout": "",
@@ -25,20 +41,9 @@ def test_flask_startup_timeout_returns_structured_error(tmp_path):
         )
     }
 
-    timeout_error = subprocess.TimeoutExpired(
-        cmd="flask-startup-check",
-        timeout=15,
-        output=b"startup output",
-        stderr=b"startup diagnostic",
-    )
-
-    with patch(
-            "subprocess.run",
-            side_effect=timeout_error,
-        ):
-        result = agent.run_project("TimeoutTest")
+    result = agent.run_project("TimeoutTest")
 
     assert result["return_code"] == 124
     assert result["stdout"] == "startup output"
-    assert "timed out after 15 seconds" in result["stderr"]
+    assert "Flask startup check timed out after 15 seconds." in result["stderr"]
     assert "startup diagnostic" in result["stderr"]

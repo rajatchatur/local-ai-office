@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task Details</title>
+</head>
+<body>
+    <h1>Task: {{ task }}</h1>
+    <p>Description: {{ description }}</p>
+    <form method="POST" action="/delete">
+        <button type="submit">Delete</button>
+    </form>
+</body>
+</html>

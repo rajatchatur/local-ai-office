@@ -1,5 +1,9 @@
-from pathlib import Path
+import os
+import shutil
+import signal
 import subprocess
+import tempfile
+from pathlib import Path
 
 
 class Workspace:
@@ -46,6 +50,38 @@ class Workspace:
                 f"{relative_path}"
             ) from exc
 
+    def _atomic_write(
+        self,
+        path: Path,
+        content: str,
+    ) -> None:
+        fd, temp_name = tempfile.mkstemp(
+            dir=str(path.parent),
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+        )
+
+        try:
+            with os.fdopen(
+                fd,
+                "w",
+                encoding="utf-8",
+                newline="",
+            ) as handle:
+                handle.write(content)
+
+            if path.exists():
+                shutil.copymode(path, temp_name)
+
+            os.replace(temp_name, path)
+
+        except BaseException:
+            try:
+                os.unlink(temp_name)
+            except FileNotFoundError:
+                pass
+            raise
+
     def create_file(
         self,
         relative_path: str,
@@ -58,10 +94,7 @@ class Workspace:
             exist_ok=True,
         )
 
-        path.write_text(
-            content,
-            encoding="utf-8",
-        )
+        self._atomic_write(path, content)
 
     def edit_file(
         self,
@@ -75,10 +108,7 @@ class Workspace:
                 f"File not found: {relative_path}"
             )
 
-        path.write_text(
-            content,
-            encoding="utf-8",
-        )
+        self._atomic_write(path, content)
 
     def delete_file(
         self,
@@ -94,37 +124,69 @@ class Workspace:
         path.unlink()
 
 
-    def run_command(
+    def run_argv(
         self,
-        command: str,
+        argv: list[str],
         timeout: int = 60,
         cwd: str | None = None,
+        env: dict[str, str] | None = None,
     ) -> dict:
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                cwd=self._safe_path(cwd) if cwd else self.root,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
+        return self.run_command(
+            argv,
+            timeout=timeout,
+            cwd=cwd,
+            env=env,
+        )
+
+    def run_command(
+        self,
+        command: str | list[str],
+        timeout: int = 60,
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> dict:
+        shell = isinstance(command, str)
+        argv = command if shell else [str(item) for item in command]
+
+        run_env = os.environ.copy()
+        if env:
+            run_env.update(env)
+
+        popen_kwargs = {}
+        if os.name != "nt":
+            popen_kwargs["start_new_session"] = True
+        else:
+            popen_kwargs["creationflags"] = (
+                subprocess.CREATE_NEW_PROCESS_GROUP
             )
 
+        process = subprocess.Popen(
+            argv,
+            shell=shell,
+            cwd=self._safe_path(cwd) if cwd else self.root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=run_env,
+            **popen_kwargs,
+        )
+
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+
             return {
-                "return_code": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
+                "return_code": process.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
             }
 
-        except subprocess.TimeoutExpired as exc:
-            stdout = exc.stdout or ""
-            stderr = exc.stderr or ""
+        except subprocess.TimeoutExpired:
+            if os.name == "nt":
+                process.kill()
+            else:
+                os.killpg(process.pid, signal.SIGKILL)
 
-            # subprocess may return captured output as bytes on timeout.
-            if isinstance(stdout, bytes):
-                stdout = stdout.decode("utf-8", errors="replace")
-            if isinstance(stderr, bytes):
-                stderr = stderr.decode("utf-8", errors="replace")
+            stdout, stderr = process.communicate()
 
             return {
                 "return_code": 124,

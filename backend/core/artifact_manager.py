@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, List
 import uuid
@@ -7,8 +8,14 @@ class ArtifactManager:
 
     def __init__(
         self,
-        base_directory: str = "data/generated",
+        base_directory: str | None = None,
     ):
+        if base_directory is None:
+            base_directory = os.getenv(
+                "LOCAL_AI_OFFICE_ARTIFACTS_DIR",
+                "data/generated",
+            )
+
         self.base_directory = Path(base_directory)
 
         self.base_directory.mkdir(

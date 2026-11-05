@@ -61,6 +61,7 @@ def test_persistence_uses_current_result_not_global_task_list(monkeypatch):
         assert captured["files"] == project["files"]
         assert artifact["status"] == "success"
         assert artifact["execution_summary"]["return_code"] == 0
+        assert artifact["execution_summary"]["skipped"] is False
 
         events = event_bus.get_all_events()
         created = [
@@ -69,6 +70,49 @@ def test_persistence_uses_current_result_not_global_task_list(monkeypatch):
         ]
         assert len(created) == 1
         assert created[0].data["request_id"] == request_id
+
+    asyncio.run(run_test())
+
+
+def test_persistence_preserves_skipped_execution_summary(monkeypatch):
+    async def run_test():
+        project = {
+            "project_name": "DocsOnlyProject",
+            "status": "success",
+            "files": [
+                {"path": "README.md", "content": "# Docs"}
+            ],
+            "execution": {
+                "return_code": 0,
+                "stdout": "Documentation update applied; execution skipped.",
+                "stderr": "",
+                "skipped": True,
+                "reason": "documentation_only",
+            },
+        }
+
+        monkeypatch.setattr(
+            routes.application,
+            "artifact_manager",
+            SimpleNamespace(
+                create_project=lambda **kwargs: {
+                    "request_id": kwargs["request_id"],
+                    "project_name": kwargs["project_name"],
+                    "files": kwargs["files"],
+                }
+            ),
+        )
+
+        artifact = await routes.persist_coder_artifact(
+            "docs-only-request",
+            project,
+        )
+
+        assert artifact["execution_summary"]["skipped"] is True
+        assert (
+            artifact["execution_summary"]["reason"]
+            == "documentation_only"
+        )
 
     asyncio.run(run_test())
 

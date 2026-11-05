@@ -1,4 +1,5 @@
 import json
+import os
 from fastapi import Query
 from backend.agents.boss_agent import _coder_result_context
 
@@ -17,6 +18,32 @@ from backend.core.application import application
 
 
 router = APIRouter()
+
+
+# ========================================================
+# CONFIGURATION
+# ========================================================
+
+def _request_timeout() -> float:
+
+    raw = os.getenv(
+        "LOCAL_AI_OFFICE_REQUEST_TIMEOUT",
+        "900",
+    )
+
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Invalid LOCAL_AI_OFFICE_REQUEST_TIMEOUT: {raw!r}"
+        ) from exc
+
+    if value <= 0:
+        raise RuntimeError(
+            "LOCAL_AI_OFFICE_REQUEST_TIMEOUT must be positive."
+        )
+
+    return value
 
 
 # ========================================================
@@ -195,14 +222,16 @@ async def chat(
     print("=" * 70)
 
 
-    asyncio.create_task(
+    application.track_task(
 
         run_boss(
 
             request.message,
 
             request_id,
-        )
+        ),
+
+        name=f"run_boss:{request_id}",
     )
 
 
@@ -244,7 +273,12 @@ async def run_boss(
 
         _coder_result_context.set(None)
 
-        result = await application.boss.run(message)
+        request_timeout = _request_timeout()
+
+        result = await asyncio.wait_for(
+            application.boss.run(message),
+            timeout=request_timeout,
+        )
 
         coder_result = _coder_result_context.get()
         artifact_input = (
@@ -265,6 +299,34 @@ async def run_boss(
                                             "artifact": artifact,
                                         },
                                     )
+
+
+    except asyncio.TimeoutError:
+
+        error = (
+            f"Request timed out after "
+            f"{request_timeout} seconds."
+        )
+
+        application.event_bus.publish(
+
+            event_type="request_failed",
+
+            agent="boss",
+
+            data={
+
+                "request_id":
+                    request_id,
+
+                "error":
+                    error,
+            },
+        )
+
+        print(
+            f"\nREQUEST TIMED OUT: {request_id}"
+        )
 
 
     except Exception as exc:
@@ -313,7 +375,6 @@ async def persist_coder_artifact(
 
     if not project_name or not isinstance(files, list):
         return None
-
     artifact = application.artifact_manager.create_project(
         project_name=project_name,
         files=files,
@@ -329,6 +390,8 @@ async def persist_coder_artifact(
         "return_code": execution.get("return_code"),
         "stdout": execution.get("stdout", ""),
         "stderr": execution.get("stderr", ""),
+        "skipped": bool(execution.get("skipped", False)),
+        "reason": execution.get("reason"),
     }
 
     application.event_bus.publish(

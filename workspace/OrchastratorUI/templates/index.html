@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Orchastrator UI</title>
+</head>
+<body>
+    <h1>Orchastrator</h1>
+    <form method="post" action="/update">
+        <label for="transaction">Transaction:</label>
+        <input type="text" name="transaction" id="transaction" value="TX001" disabled>
+        <label for="enabled">Enabled:</label>
+        <input type="checkbox" name="enabled" id="enabled" value="true">
+        <input type="text" name="updated" id="updated" value="2023-01-01" disabled>
+        <br>
+        <button type="submit">Update</button>
+    </form>
+    <h2>Transactions</h2>
+    <ul>
+        {% for t in transactions %}
+        <li>{{ t.transaction }} - {{ t.enabled }} - {{ t.updated }}
+        {% if t.enabled %} <span>Enabled</span> {% else %} <span>Disabled</span> {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    <h2>Delete</h2>
+    <form method="post" action="/delete">
+        <label for="transaction">Transaction:</label>
+        <input type="text" name="transaction" id="transaction" value="TX001">
+        <br>
+        <button type="submit">Delete</button>
+    </form>
+</body>
+</html>

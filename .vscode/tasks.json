@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Local AI Office: Run tests",
+      "type": "process",
+      "command": "/Users/rajatchatur/anaconda3/envs/aiagents311/bin/python",
+      "args": [
+              "${workspaceFolder}/scripts/vscode_repair_task.py"
+            ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Local AI Office: Check diff",
+      "type": "process",
+      "command": "git",
+      "args": [
+        "diff",
+        "--check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Local AI Office: Verify project",
+      "dependsOn": [
+        "Local AI Office: Run tests",
+        "Local AI Office: Check diff"
+      ],
+      "dependsOrder": "sequence",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Local AI Office: Repair workflow",
+      "type": "process",
+      
+    "command": "/Users/rajatchatur/anaconda3/envs/aiagents311/bin/python",
+      "args": [
+        "${workspaceFolder}/scripts/vscode_repair_task.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      }
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import sys
+
 from backend.agents.coder import CoderAgent
 
 
@@ -10,7 +12,7 @@ class FakeWorkspace:
         }
         self.calls = []
 
-    def run_command(self, command, timeout=60, cwd=None):
+    def run_command(self, command, timeout=60, cwd=None, env=None):
         self.calls.append({
             "command": command,
             "timeout": timeout,
@@ -54,7 +56,13 @@ def test_project_tests_pass():
     assert result["return_code"] == 0
     assert result["test_result"]["status"] == "passed"
     assert result["test_result"]["stdout"] == "3 passed"
-    assert agent.workspace.calls[0]["command"] == "python -m pytest -q tests/test_app.py"
+    assert agent.workspace.calls[0]["command"] == [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_app.py",
+    ]
     assert agent.workspace.calls[0]["cwd"] == "Demo"
     assert agent.workspace.calls[0]["timeout"] == 120
 
@@ -104,4 +112,104 @@ def test_project_test_runner_passes_only_discovered_test_files():
         "helpers/test_helper.py",
         "tests/test_app.py",
         "tests/test_other.py",
+    ]
+
+
+def test_javascript_package_test_script_is_discovered():
+    agent = make_agent({
+        "package.json": (
+            '{"name":"demo","scripts":{"test":"node test.js"}}'
+        ),
+        "index.js": 'console.log("hello");\n',
+        "test.js": 'console.log("tests passed");\n',
+    })
+
+    result = agent.run_project("Demo")
+
+    assert result["test_result"]["status"] == "passed"
+    assert result["test_result"]["return_code"] == 0
+    assert agent.workspace.calls[0]["command"] == ["npm", "test"]
+    assert agent.workspace.calls[0]["cwd"] == "Demo"
+    assert agent.workspace.calls[0]["timeout"] == 120
+
+
+def test_javascript_package_without_test_script_reports_no_tests():
+    agent = make_agent({
+        "package.json": '{"name":"demo","scripts":{"start":"node index.js"}}',
+        "index.js": 'console.log("hello");\n',
+    })
+
+    result = agent.run_project("Demo")
+
+    assert result["test_result"]["status"] == "no_tests"
+    assert result["test_result"]["return_code"] == 0
+    assert agent.workspace.calls == []
+
+
+def test_javascript_test_failure_fails_overall_execution():
+    agent = make_agent(
+        {
+            "package.json": (
+                '{"name":"demo","scripts":{"test":"node test.js"}}'
+            ),
+            "index.js": 'console.log("hello");\n',
+            "test.js": 'throw new Error("test failed");\n',
+        },
+        {
+            "return_code": 1,
+            "stdout": "",
+            "stderr": "Error: test failed",
+        },
+    )
+
+    result = agent.run_project("Demo")
+
+    assert result["return_code"] == 1
+    assert result["application_result"]["return_code"] == 0
+    assert result["test_result"]["status"] == "failed"
+    assert "Automated project tests failed." in result["stderr"]
+
+
+def test_invalid_package_json_fails_with_clear_result():
+    agent = make_agent({
+        "package.json": '{"scripts":',
+        "index.js": 'console.log("hello");\n',
+    })
+
+    result = agent.run_project("Demo")
+
+    assert result["return_code"] == 1
+    assert result["test_result"]["status"] == "failed"
+    assert "Invalid package.json" in result["test_result"]["stderr"]
+
+
+def test_invalid_package_scripts_type_fails_clearly():
+    agent = make_agent({
+        "package.json": '{"scripts":[]}',
+        "index.js": 'console.log("hello");\n',
+    })
+
+    result = agent.run_project("Demo")
+
+    assert result["return_code"] == 1
+    assert result["test_result"]["status"] == "failed"
+    assert "scripts must be an object" in result["test_result"]["stderr"]
+
+
+def test_python_tests_take_precedence_over_npm_script():
+    agent = make_agent({
+        "package.json": '{"scripts":{"test":"npm run custom-test"}}',
+        "main.py": 'print("hello")\n',
+        "tests/test_app.py": "def test_example():\n    assert True\n",
+    })
+
+    result = agent.run_project("Demo")
+
+    assert result["test_result"]["status"] == "passed"
+    assert agent.workspace.calls[0]["command"] == [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_app.py",
     ]

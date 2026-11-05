@@ -1,1 +1,1 @@
-print('Hello from Local AI Office')
+print("Hello from Local AI Office")

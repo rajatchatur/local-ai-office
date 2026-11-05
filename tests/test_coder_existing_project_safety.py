@@ -214,6 +214,7 @@ def test_readme_update_preserves_existing_source_and_skips_execution(tmp_path):
 
     assert result["status"] == "success"
     assert result["execution"]["return_code"] == 0
+    assert result["execution"]["skipped"] is True
     assert "skipped" in result["execution"]["stdout"].lower()
     assert main_file.read_text(encoding="utf-8") == original
     assert (project_dir / "README.md").read_text(encoding="utf-8") == (
@@ -319,6 +320,13 @@ def test_explicit_source_update_only_changes_named_existing_file(tmp_path):
         },
     )
 
+    execution_calls = []
+    coder.run_project = lambda name: execution_calls.append(name) or {
+        "return_code": 0,
+        "stdout": "Application and tests passed",
+        "stderr": "",
+    }
+
     result = json.loads(
         asyncio.run(
             coder._update_existing_project(
@@ -329,6 +337,9 @@ def test_explicit_source_update_only_changes_named_existing_file(tmp_path):
     )
 
     assert result["status"] == "success"
+    assert execution_calls == ["hello_ai_office"]
+    assert result["execution"]["return_code"] == 0
+    assert result["execution"].get("skipped") is not True
     assert main_file.read_text(encoding="utf-8") == 'print("updated")\n'
     assert readme_file.read_text(encoding="utf-8") == "# Existing docs\n"
 
@@ -422,6 +433,7 @@ def test_run_routes_readme_request_through_safe_existing_project_flow(tmp_path):
     assert result["status"] == "success"
     assert result["project_name"] == "hello_ai_office"
     assert result["execution"]["return_code"] == 0
+    assert result["execution"]["skipped"] is True
     assert "skipped" in result["execution"]["stdout"].lower()
     assert coder.llm.calls == 1
     assert main_file.read_text(encoding="utf-8") == original_source
@@ -524,3 +536,46 @@ def test_normal_generation_allows_new_project_directory(tmp_path):
 
     coder._ensure_project_directory_available("fresh_project")
     assert not (tmp_path / "fresh_project").exists()
+
+
+def test_source_update_reports_execution_failure(tmp_path):
+    import asyncio
+    import json
+
+    project_dir = tmp_path / "hello_ai_office"
+    project_dir.mkdir()
+    (project_dir / "main.py").write_text(
+        'print("old")\n',
+        encoding="utf-8",
+    )
+
+    coder = make_update_agent(
+        tmp_path,
+        {
+            "project_name": "hello_ai_office",
+            "summary": "Update main.py",
+            "files": [
+                {"path": "main.py", "content": 'print("broken")\n'}
+            ],
+        },
+    )
+
+    coder.run_project = lambda name: {
+        "return_code": 1,
+        "stdout": "",
+        "stderr": "Simulated source execution failure",
+    }
+
+    result = json.loads(
+        asyncio.run(
+            coder._update_existing_project(
+                "Update main.py in hello_ai_office",
+                "hello_ai_office",
+            )
+        )
+    )
+
+    assert result["status"] == "failed"
+    assert result["execution"]["return_code"] == 1
+    assert "Simulated source execution failure" in result["execution"]["stderr"]
+    assert result["execution"].get("skipped") is not True

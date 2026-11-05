@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Orchestrator UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .toggle {
+            display: block;
+            margin: 20px auto;
+            width: 200px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .toggle:hover {
+            background-color: #49a089;
+        }
+        .transaction-list {
+            list-style: none;
+            padding: 0;
+        }
+        .transaction-list li {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .transaction-list li .label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Orchestrator UI</h1>
+        <div class="toggle" id="toggle-1">Enable Transaction</div>
+        <ul class="transaction-list">
+            <li class="transaction-list">
+                <span class="label">Transaction:</span>
+                <span id="transaction-1">Dummy Transaction</span>
+            </li>
+        </ul>
+        <script>
+            const toggle = document.getElementById('toggle-1');
+            const transaction = document.getElementById('transaction-1');
+            toggle.addEventListener('click', () => {
+                transaction.textContent = transaction.textContent === 'Dummy Transaction' ? 'Dummy Transaction Enabled' : 'Dummy Transaction';
+                transaction.classList.toggle('enabled');
+            });
+        </script>
+    </div>
+</body>
+</html>

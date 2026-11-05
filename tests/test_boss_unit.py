@@ -264,3 +264,24 @@ def test_boss_routes_readme_update_as_one_complete_coder_task():
     assert tasks[0]["assigned_to"] == "coder"
     assert original_request in tasks[0]["description"]
     assert "Preserve all existing source files" in tasks[0]["description"]
+
+
+def test_boss_routes_new_project_with_readme_as_software_task():
+    boss, task_manager, agent_registry, event_bus = make_boss()
+    original_request = (
+        "Create a minimal Python project named DockerSmokeTest20261018. "
+        "Create main.py, tests/test_main.py, and README.md. "
+        "Run the application and automated tests. "
+        "Preserve all existing source files."
+    )
+    boss.agent_registry.get_agent_info = lambda: [
+        {"name": "coder", "role": "Coder Agent", "status": "idle"}
+    ]
+
+    tasks = asyncio.run(boss.create_plan(original_request))
+
+    assert len(tasks) == 1
+    assert tasks[0]["assigned_to"] == "coder"
+    assert original_request in tasks[0]["description"]
+    assert "entire software request" in tasks[0]["description"]
+    assert "documentation only" not in tasks[0]["description"]

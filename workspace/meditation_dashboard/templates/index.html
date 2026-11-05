@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meditation Dashboard</title>
+</head>
+<body>
+    <h1>Meditation Data Tracker</h1>
+    <form method="POST" action="/add">
+        <label for="description">Meditation Description:</label>
+        <textarea id="description" name="description" required></textarea>
+        <button type="submit">Add</button>
+    </form>
+    <form method="POST" action="/delete">
+        <label for="task">Select Task:</label>
+        <select id="task" name="task" required>
+            <option value="">Select</option>
+            <option value="Breathing">Breathing</option>
+            <option value="Focus">Focus</option>
+            <option value="Mantra">Mantra</option>
+        </select>
+        <button type="submit">Delete</button>
+    </form>
+    <form method="POST" action="/complete">
+        <label for="complete">Complete:</label>
+        <input type="text" id="complete" name="complete" required>
+        <button type="submit">Complete</button>
+    </form>
+</body>
+</html>

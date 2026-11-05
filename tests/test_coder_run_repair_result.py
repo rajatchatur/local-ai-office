@@ -96,6 +96,12 @@ def test_run_reports_failure_when_repair_and_rerun_still_fail():
             {
                 "return_code": 1,
                 "stdout": "",
+                "stderr": "First repair still failing",
+                "test_result": {"status": "failed", "return_code": 1},
+            },
+            {
+                "return_code": 1,
+                "stdout": "",
                 "stderr": "Tests still failing after repair",
                 "test_result": {"status": "failed", "return_code": 1},
             },
@@ -104,7 +110,7 @@ def test_run_reports_failure_when_repair_and_rerun_still_fail():
         response = await agent.run("Build a simple Python application")
         project = json.loads(response)
 
-        assert len(edits) == 1
+        assert len(edits) == 2
         assert project["status"] == "failed"
         assert project["execution"]["return_code"] == 1
         assert "Tests still failing after repair" in project["execution"]["stderr"]

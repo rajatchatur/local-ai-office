@@ -177,6 +177,11 @@ def test_existing_project_repair_reports_failure_if_rerun_fails():
                 "stdout": "",
                 "stderr": "Still broken",
             },
+            {
+                "return_code": 2,
+                "stdout": "",
+                "stderr": "Still broken",
+            },
         ])
 
         agent.run_project = lambda path: next(executions)
