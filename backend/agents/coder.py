@@ -985,6 +985,9 @@ class CoderAgent(BaseAgent):
       failures, and incorrect expected values.
     - Check test modules for missing imports before changing application code.
     - Preserve tests and application behavior that are already correct.
+    - Keep every existing top-level class and function in the file, even
+      if it is not the cause of the failure. Never delete one to fix an
+      error; fix the code inside it instead.
     - Make the smallest change that resolves the actual failure.
     - Ensure the proposed fix addresses the reported error, not just syntax.
 
