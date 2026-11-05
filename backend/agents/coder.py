@@ -152,6 +152,31 @@ class CoderAgent(BaseAgent):
             content,
         )
 
+    def _repair_flask_db_context(self, content: str) -> str:
+        """
+        Flask-SQLAlchemy needs an app context for db.create_all(). Wrap any
+        bare db.create_all() call in `with app.app_context():` when the file
+        does not already do so.
+        """
+        if "db.create_all()" not in content or "app_context()" in content:
+            return content
+
+        import re
+
+        def wrap(match):
+            indent = match.group(1)
+            return (
+                f"{indent}with app.app_context():\n"
+                f"{indent}    db.create_all()"
+            )
+
+        return re.sub(
+            r"^([ \t]*)db\.create_all\(\)[ \t]*$",
+            wrap,
+            content,
+            flags=re.M,
+        )
+
     def write_project_to_workspace(
         self, project: dict, preserve_existing: bool = False
     ) -> str:
@@ -169,6 +194,9 @@ class CoderAgent(BaseAgent):
                 content = self._repair_javascript_newline_separators(
                     content
                 )
+
+            if relative_path.lower().endswith(".py"):
+                content = self._repair_flask_db_context(content)
 
             file_path = f"{project_dir}/{relative_path}"
 
