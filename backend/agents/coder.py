@@ -23,6 +23,31 @@ PYTHON_PACKAGE_MAP = {
     "numpy": "numpy",
     "boto3": "boto3",
     "snowflake": "snowflake-connector-python",
+    "flask_caching": "flask-caching",
+    "flask_wtf": "flask-wtf",
+    "flask_login": "flask-login",
+    "uvicorn": "uvicorn",
+    "pydantic": "pydantic",
+    "sqlalchemy": "sqlalchemy",
+    "redis": "redis",
+    "jwt": "pyjwt",
+    "passlib": "passlib",
+    "bcrypt": "bcrypt",
+    "bs4": "beautifulsoup4",
+    "matplotlib": "matplotlib",
+    "sklearn": "scikit-learn",
+    "tabulate": "tabulate",
+    "psycopg2": "psycopg2-binary",
+    "pymysql": "pymysql",
+    "dotenv": "python-dotenv",
+    "dateutil": "python-dateutil",
+    "yaml": "pyyaml",
+    "PIL": "pillow",
+    "geopy": "geopy",
+    "rich": "rich",
+    "click": "click",
+    "jinja2": "jinja2",
+    "pytest": "pytest",
 }
 PYTHON_STDLIB_MODULES = {
     "abc",
@@ -1045,7 +1070,7 @@ class CoderAgent(BaseAgent):
 
         print(f"\nCODER: Testing existing project '{project_name}'...")
 
-        execution_result = self.run_project(project_name)
+        execution_result = await asyncio.to_thread(self.run_project, project_name)
 
         if execution_result["return_code"] == 0:
             return {
@@ -1088,7 +1113,7 @@ class CoderAgent(BaseAgent):
             print("\nCODER: Fix applied.")
             print("CODER: Running project again...")
 
-            execution_result = self.run_project(project_name)
+            execution_result = await asyncio.to_thread(self.run_project, project_name)
 
         return {
             "project_name": project_name,
@@ -1416,7 +1441,7 @@ Rules:
                 "reason": "documentation_only",
             }
         else:
-            execution = self.run_project(project_name)
+            execution = await asyncio.to_thread(self.run_project, project_name)
 
         result_status = (
             "success"
@@ -1723,7 +1748,7 @@ Rules:
                 workspace_path = self.write_project_to_workspace(project)
 
             # Run the generated application.
-            execution_result = self.run_project(workspace_path)
+            execution_result = await asyncio.to_thread(self.run_project, workspace_path)
 
             # Attempt up to two repairs if execution fails.
             repair_attempts = 0
@@ -1769,7 +1794,7 @@ Rules:
                 )
 
                 print("\nCODER: Repair applied. Running project again...")
-                execution_result = self.run_project(workspace_path)
+                execution_result = await asyncio.to_thread(self.run_project, workspace_path)
 
             # Report the actual final execution result.
             print("\n" + "=" * 50)
