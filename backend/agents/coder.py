@@ -26,6 +26,7 @@ PYTHON_PACKAGE_MAP = {
     "flask_caching": "flask-caching",
     "flask_wtf": "flask-wtf",
     "flask_login": "flask-login",
+    "werkzeug": "werkzeug",
     "flask_bcrypt": "Flask-Bcrypt",
     "flask_migrate": "Flask-Migrate",
     "flask_socketio": "Flask-SocketIO",
@@ -213,6 +214,33 @@ class CoderAgent(BaseAgent):
         )
         return content[: match.start()] + config_line + content[match.start():]
 
+    def _repair_requirements_text(self, content: str) -> str:
+        """
+        The model sometimes writes an import path such as
+        `werkzeug.security` into requirements.txt. pip cannot install that,
+        so keep only the top-level package for known import roots.
+        Dotted names that are real PyPI packages (such as zope.interface)
+        are left alone.
+        """
+        import re
+
+        known_roots = set(PYTHON_PACKAGE_MAP) | {"werkzeug"}
+        lines = []
+
+        for line in content.splitlines():
+            match = re.match(r"^\s*([A-Za-z0-9_.\-]+)(.*)$", line)
+
+            if match and "." in match.group(1):
+                name = match.group(1)
+                root = name.split(".")[0]
+
+                if root.lower() in known_roots:
+                    line = root + match.group(2)
+
+            lines.append(line)
+
+        return "\n".join(lines) + ("\n" if content.endswith("\n") else "")
+
     def write_project_to_workspace(
         self, project: dict, preserve_existing: bool = False
     ) -> str:
@@ -230,6 +258,9 @@ class CoderAgent(BaseAgent):
                 content = self._repair_javascript_newline_separators(
                     content
                 )
+
+            if relative_path.lower() == "requirements.txt":
+                content = self._repair_requirements_text(content)
 
             if relative_path.lower().endswith(".py"):
                 content = self._repair_flask_db_context(content)
