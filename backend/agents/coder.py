@@ -185,6 +185,34 @@ class CoderAgent(BaseAgent):
             flags=re.M,
         )
 
+    def _repair_sqlalchemy_config(self, content: str) -> str:
+        """
+        Flask-SQLAlchemy raises at `db = SQLAlchemy(app)` when no database
+        URI is configured yet. Insert a default SQLite URI just before the
+        first `SQLAlchemy(app)` call when the file sets none.
+        """
+        if "SQLAlchemy(" not in content:
+            return content
+        if "SQLALCHEMY_DATABASE_URI" in content or "SQLALCHEMY_BINDS" in content:
+            return content
+
+        import re
+
+        match = re.search(
+            r"^([ \t]*)\w+\s*=\s*SQLAlchemy\(\s*(\w+)\s*\)",
+            content,
+            flags=re.M,
+        )
+        if match is None:
+            return content
+
+        indent, app_name = match.group(1), match.group(2)
+        config_line = (
+            f'{indent}{app_name}.config.setdefault('
+            f'"SQLALCHEMY_DATABASE_URI", "sqlite:///app.db")\n'
+        )
+        return content[: match.start()] + config_line + content[match.start():]
+
     def write_project_to_workspace(
         self, project: dict, preserve_existing: bool = False
     ) -> str:
@@ -205,6 +233,7 @@ class CoderAgent(BaseAgent):
 
             if relative_path.lower().endswith(".py"):
                 content = self._repair_flask_db_context(content)
+                content = self._repair_sqlalchemy_config(content)
 
             file_path = f"{project_dir}/{relative_path}"
 
