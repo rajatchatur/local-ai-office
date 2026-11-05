@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,10 +10,17 @@ from backend.api.websocket import websocket_endpoint
 from backend.core.application import application
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    await application.shutdown()
+
+
 app = FastAPI(
     title="Local AI Office",
     description="Local multi-agent AI office",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -34,11 +43,6 @@ app.websocket(
 )(
     websocket_endpoint
 )
-
-
-@app.on_event("shutdown")
-async def shutdown_background_tasks():
-    await application.shutdown()
 
 
 @app.get("/")
