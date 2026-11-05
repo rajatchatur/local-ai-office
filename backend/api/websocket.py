@@ -11,21 +11,26 @@ from backend.agents.boss_agent import _coder_result_context
 websocket_manager = WebSocketManager()
 
 
+def _is_closed(websocket: WebSocket) -> bool:
+    """True only when the socket is explicitly closed."""
+    return (
+        websocket.application_state == WebSocketState.DISCONNECTED
+        or websocket.client_state == WebSocketState.DISCONNECTED
+    )
+
+
 async def safe_send(websocket: WebSocket, payload: dict) -> bool:
     """
     Send JSON only while the client is still connected. A request can
     finish after the browser has gone away; its result is then dropped
     instead of raising on a closed socket.
     """
-    if (
-        websocket.application_state != WebSocketState.CONNECTED
-        or websocket.client_state != WebSocketState.CONNECTED
-    ):
+    if _is_closed(websocket):
         print("\nWEBSOCKET: Client gone; response not delivered.")
         return False
 
     try:
-        await safe_send(websocket, payload)
+        await websocket.send_json(payload)
         return True
     except (RuntimeError, WebSocketDisconnect) as exc:
         print(f"\nWEBSOCKET: Send skipped, connection closed: {exc}")
@@ -55,10 +60,7 @@ async def websocket_endpoint(
             try:
                 # Stop as soon as the socket is no longer open. Without
                 # this, a dead connection re-raises on every loop pass.
-                if (
-                    websocket.application_state != WebSocketState.CONNECTED
-                    or websocket.client_state != WebSocketState.CONNECTED
-                ):
+                if _is_closed(websocket):
                     print("\nWEBSOCKET: Connection closed; stopping receive loop.")
                     break
 

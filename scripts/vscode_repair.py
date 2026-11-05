@@ -97,11 +97,10 @@ def build_patch(originals: dict[str, str],
                 replacements: dict[str, str]) -> str:
     """Build a Git-applicable patch for changed, authorized file contents."""
 
-    def normalize(text: str) -> list[str]:
-        lines = text.splitlines(keepends=True)
-        if lines and not lines[-1].endswith("\n"):
-            lines[-1] += "\n"
-        return lines
+    def raw_lines(text: str) -> list[str]:
+        # Keep the exact text, including a missing final newline, so the
+        # patch matches the file on disk.
+        return text.splitlines(keepends=True)
 
     chunks = []
     for relative, new_content in replacements.items():
@@ -109,14 +108,19 @@ def build_patch(originals: dict[str, str],
         if old_content == new_content:
             continue
 
+        diff_lines = difflib.unified_diff(
+            raw_lines(old_content),
+            raw_lines(new_content),
+            fromfile=f"a/{relative}",
+            tofile=f"b/{relative}",
+            lineterm="\n",
+        )
+        # A content line without a newline means that side of the file ends
+        # without one; Git marks it with "\ No newline at end of file".
         diff = "".join(
-            difflib.unified_diff(
-                normalize(old_content),
-                normalize(new_content),
-                fromfile=f"a/{relative}",
-                tofile=f"b/{relative}",
-                lineterm="\n",
-            )
+            line if line.endswith("\n")
+            else line + "\n\\ No newline at end of file\n"
+            for line in diff_lines
         )
         if diff:
             chunks.append(f"diff --git a/{relative} b/{relative}\n{diff}")

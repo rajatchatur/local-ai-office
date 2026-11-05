@@ -10,7 +10,7 @@ def test_llm_client_uses_default_configuration(monkeypatch):
 
     client = LlamaCppClient()
 
-    assert client.model == "qwen3-1.7b"
+    assert client.model == "qwen3.5-4b"
     assert client.base_url == "http://127.0.0.1:8000"
 
 
