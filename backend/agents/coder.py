@@ -184,6 +184,25 @@ class CoderAgent(BaseAgent):
         return project_dir
 
 
+    def _unique_project_name(self, project_name: str) -> str:
+        """
+        Return project_name, or project_name_2, _3, ... if that folder is
+        already in the workspace. Normal generation never overwrites a
+        project, so a taken name is renamed instead of failing.
+        """
+        workspace = getattr(self, "workspace", None)
+        if workspace is None:
+            return project_name
+
+        candidate = project_name
+        suffix = 2
+
+        while workspace._safe_path(candidate).exists():
+            candidate = f"{project_name}_{suffix}"
+            suffix += 1
+
+        return candidate
+
     def _ensure_project_directory_available(self, project_name: str) -> None:
         """Prevent normal generation from overwriting an existing project."""
         workspace = getattr(self, "workspace", None)
@@ -1744,6 +1763,15 @@ Rules:
             # scoped update path. Normal generation must not overwrite projects.
             project_name = project["project_name"].strip()
             async with self._project_lock(project_name):
+                unique_name = self._unique_project_name(project_name)
+                if unique_name != project_name:
+                    print(
+                        f"CODER: '{project_name}' already exists; "
+                        f"using '{unique_name}' instead."
+                    )
+                    project["project_name"] = unique_name
+                    project_name = unique_name
+
                 self._ensure_project_directory_available(project_name)
                 workspace_path = self.write_project_to_workspace(project)
 
