@@ -492,6 +492,8 @@ def test_invalid_python_update_rejects_all_files_before_writing(tmp_path):
     [
         "Create a new application based on hello_ai_office and add a README",
         "Build a new project inspired by hello_ai_office and update documentation",
+        "Build a todo list like hello_ai_office that lets users add tasks",
+        "Make a dashboard similar to hello_ai_office where users can add items",
     ],
 )
 def test_existing_project_classifier_does_not_capture_new_project_requests(

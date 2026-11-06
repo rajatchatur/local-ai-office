@@ -1349,6 +1349,21 @@ class CoderAgent(BaseAgent):
         if re.search(new_project_pattern, task_lower):
             return None
 
+        # A request that opens with a creation phrase ("Build a todo list
+        # that lets users add tasks") is a new project even when it later
+        # contains a word like "add" and a word that matches an existing
+        # project's name. Documentation requests are the exception.
+        creation_lead = re.match(
+            r"\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?"
+            r"(?:(?:create|build|generate|develop|design|scaffold|implement|code)\b"
+            r"|(?:make|write)\s+(?:me\s+)?(?:a|an|new)\b)",
+            task_lower,
+        )
+        if creation_lead and not re.search(
+            r"\b(readme|documentation|docs)\b", task_lower
+        ):
+            return None
+
         update_intent = re.search(
             r"\b(add|update|edit|modify|change|document|documentation|readme)\b",
             task_lower,
