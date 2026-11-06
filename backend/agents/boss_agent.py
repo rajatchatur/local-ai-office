@@ -714,13 +714,31 @@ Return ONLY the JSON object.
             "\nBOSS: Creating plan..."
         )
 
-        response = await self.llm.generate(
-            prompt
-        )
+        # Ask for JSON mode with enough room for the plan. The client's
+        # default limit is small, so a long request could come back empty
+        # or cut off. Retry once before giving up.
+        last_error = None
 
-        return self._parse_plan(
-            response
-        )
+        for attempt in range(2):
+            response = await self.llm.generate(
+                prompt,
+                format="json",
+                temperature=0.0 if attempt == 0 else 0.3,
+                max_tokens=1500,
+            )
+
+            try:
+                return self._parse_plan(
+                    response
+                )
+            except ValueError as exc:
+                last_error = exc
+                print(
+                    "\nBOSS: Plan was not valid JSON "
+                    f"(attempt {attempt + 1} of 2)."
+                )
+
+        raise last_error
 
     # ==========================================================
     # PARSE BOSS PLAN

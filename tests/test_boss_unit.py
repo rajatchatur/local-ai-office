@@ -285,3 +285,47 @@ def test_boss_routes_new_project_with_readme_as_software_task():
     assert original_request in tasks[0]["description"]
     assert "entire software request" in tasks[0]["description"]
     assert "documentation only" not in tasks[0]["description"]
+
+
+def test_boss_planner_retries_when_first_reply_is_not_json():
+    boss, task_manager, agent_registry, event_bus = make_boss()
+    boss.agent_registry.get_agent_info = lambda: [
+        {"name": "researcher", "role": "Researcher Agent", "status": "idle"}
+    ]
+    seen = []
+
+    class FakeLLM:
+        async def generate(self, prompt, **kwargs):
+            seen.append(kwargs)
+            if len(seen) == 1:
+                return ""
+            return (
+                '{"tasks": [{"description": "Summarise the history of tea",'
+                ' "assigned_to": "researcher"}]}'
+            )
+
+    boss.llm = FakeLLM()
+
+    tasks = asyncio.run(boss.create_plan("Tell me about the history of tea"))
+
+    assert len(tasks) == 1
+    assert tasks[0]["assigned_to"] == "researcher"
+    assert len(seen) == 2
+    assert all(call["format"] == "json" for call in seen)
+    assert all(call["max_tokens"] >= 1000 for call in seen)
+
+
+def test_boss_planner_raises_after_two_unparseable_replies():
+    boss, task_manager, agent_registry, event_bus = make_boss()
+    boss.agent_registry.get_agent_info = lambda: [
+        {"name": "researcher", "role": "Researcher Agent", "status": "idle"}
+    ]
+
+    class FakeLLM:
+        async def generate(self, prompt, **kwargs):
+            return "no json here"
+
+    boss.llm = FakeLLM()
+
+    with pytest.raises(ValueError, match="did not return a JSON object"):
+        asyncio.run(boss.create_plan("Tell me about the history of tea"))
