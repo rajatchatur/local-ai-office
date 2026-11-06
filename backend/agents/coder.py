@@ -1353,11 +1353,14 @@ class CoderAgent(BaseAgent):
         # that lets users add tasks") is a new project even when it later
         # contains a word like "add" and a word that matches an existing
         # project's name. Documentation requests are the exception.
+        # The Boss agent wraps the user's words as "... Original request:
+        # <text>", so classify the original request, not the wrapper.
+        core_request = task_lower.split("original request:", 1)[-1]
         creation_lead = re.match(
             r"\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?"
             r"(?:(?:create|build|generate|develop|design|scaffold|implement|code)\b"
             r"|(?:make|write)\s+(?:me\s+)?(?:a|an|new)\b)",
-            task_lower,
+            core_request,
         )
         if creation_lead and not re.search(
             r"\b(readme|documentation|docs)\b", task_lower
