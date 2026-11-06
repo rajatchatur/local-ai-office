@@ -275,10 +275,11 @@ async def run_boss(
 
         request_timeout = _request_timeout()
 
-        result = await asyncio.wait_for(
-            application.boss.run(message),
-            timeout=request_timeout,
-        )
+        # asyncio.timeout keeps boss.run in this task so the coder result
+        # context variable is visible afterwards. On Python 3.11,
+        # wait_for runs it in a separate task and loses it.
+        async with asyncio.timeout(request_timeout):
+            result = await application.boss.run(message)
 
         coder_result = _coder_result_context.get()
         artifact_input = (
