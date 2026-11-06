@@ -818,6 +818,99 @@ class CoderAgent(BaseAgent):
 
 
 
+    @staticmethod
+    def _missing_template_names(execution_result) -> list[str]:
+        """Return safe template names from Jinja TemplateNotFound errors."""
+        if not isinstance(execution_result, dict):
+            return []
+
+        output = "\n".join(
+            str(execution_result.get(key) or "")
+            for key in ("stderr", "stdout")
+        )
+
+        names = []
+        for name in re.findall(r"TemplateNotFound: ([\w./-]+)", output):
+            parts = name.split("/")
+            if (
+                name.startswith("/")
+                or any(part in ("", ".", "..") for part in parts)
+                or not name.lower().endswith(
+                    (".html", ".htm", ".jinja", ".jinja2")
+                )
+            ):
+                continue
+            if name not in names:
+                names.append(name)
+
+        return names[:6]
+
+    async def _repair_missing_templates(
+        self,
+        project_name: str,
+        execution_result: dict,
+    ) -> bool:
+        """
+        Create templates/<name> for each Jinja TemplateNotFound error.
+        An ordinary repair may only edit existing files, so a template the
+        model forgot to generate could never be fixed. Only the missing
+        template itself is created here.
+        """
+        names = self._missing_template_names(execution_result)
+        if not names:
+            return False
+
+        files = self.inspect_project(project_name)
+        prefix = f"{project_name}/"
+        created = False
+
+        for name in names:
+            relative_path = f"templates/{name}"
+            if prefix + relative_path in files:
+                continue
+
+            sources = "\n\n".join(
+                f"--- {path[len(prefix):]} ---\n{content}"
+                for path, content in sorted(files.items())
+                if path.endswith(".py") or "/templates/" in path
+            )
+
+            prompt = f"""
+You are completing a Flask project. The file templates/{name} is missing.
+
+Project files:
+{sources}
+
+Write the complete Jinja2 HTML template templates/{name}.
+
+Rules:
+- Return ONLY the HTML. No markdown fences and no explanation.
+- Use only the variables and url_for() endpoints that the Python code
+  passes to this template.
+- If other templates extend a base layout, extend it the same way.
+- Keep it simple, valid and self-contained.
+"""
+
+            html = await self.llm.generate(
+                prompt=prompt,
+                temperature=0.2,
+                max_tokens=4000,
+            )
+
+            html = re.sub(
+                r"^```[a-zA-Z]*\s*|\s*```\s*$", "", html.strip()
+            )
+
+            if "<" not in html or ">" not in html or html.startswith("{"):
+                print(f"CODER: Ignored invalid template for {name}.")
+                continue
+
+            self.workspace.create_file(prefix + relative_path, html + "\n")
+            print(f"CODER: Created missing template {relative_path}.")
+            created = True
+
+        return created
+
     def _repair_missing_test_import(
         self,
         project_name: str,
@@ -1262,6 +1355,14 @@ class CoderAgent(BaseAgent):
             and repair_attempts < 2
         ):
             repair_attempts += 1
+
+            if await self._repair_missing_templates(
+                project_name, execution_result
+            ):
+                execution_result = await asyncio.to_thread(
+                    self.run_project, project_name
+                )
+                continue
 
             fix = await self.fix_project(
                 project_name,
@@ -1956,6 +2057,16 @@ Rules:
                 and repair_attempts < 2
             ):
                 repair_attempts += 1
+
+                if await self._repair_missing_templates(
+                    workspace_path, execution_result
+                ):
+                    print("\nCODER: Templates created. Running project again...")
+                    execution_result = await asyncio.to_thread(
+                        self.run_project, workspace_path
+                    )
+                    continue
+
                 print("\nCODER: Project failed. Asking LLM to fix it...")
 
                 fix = await self.fix_project(
