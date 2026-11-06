@@ -1109,19 +1109,30 @@ class CoderAgent(BaseAgent):
     - Do not create unnecessary files.
     """
 
-        result = await self.llm.generate(
-            prompt=prompt,
-            format="json",
-            temperature=0.1,
-            max_tokens=1200,
-        )
+        # The repair returns a whole file inside JSON, so a small token
+        # limit truncates it into an unterminated string. Retry once with
+        # a larger limit before giving up.
+        fix = None
+        last_error = None
 
-        try:
-            fix = json.loads(result)
-        except (json.JSONDecodeError, TypeError) as exc:
+        for max_tokens in (4000, 8000):
+            result = await self.llm.generate(
+                prompt=prompt,
+                format="json",
+                temperature=0.1,
+                max_tokens=max_tokens,
+            )
+
+            try:
+                fix = json.loads(result)
+                break
+            except (json.JSONDecodeError, TypeError) as exc:
+                last_error = exc
+
+        if fix is None:
             raise ValueError(
-                f"Invalid repair response JSON: {exc}"
-            ) from exc
+                f"Invalid repair response JSON: {last_error}"
+            ) from last_error
 
         if not isinstance(fix, dict):
             raise ValueError("Invalid repair response")
@@ -1329,7 +1340,7 @@ class CoderAgent(BaseAgent):
         result = await self.llm.generate(
             prompt=prompt,
             temperature=0.0,
-            max_tokens=1200,
+            max_tokens=3000,
         )
 
         return result.strip()
@@ -1544,7 +1555,7 @@ Rules:
             prompt=prompt,
             format="json",
             temperature=0.0,
-            max_tokens=1800,
+            max_tokens=4000,
         )
         project = self._parse_project(raw)
 
