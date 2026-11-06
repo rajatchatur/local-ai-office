@@ -10,6 +10,54 @@ from backend.agents.base_agent import BaseAgent
 from backend.llm.llama_cpp_client import LlamaCppClient
 from backend.core.workspace import Workspace
 
+FLASK_SMOKE_SCRIPT = """
+import runpy, sys, traceback
+from werkzeug.serving import make_server
+
+namespace = runpy.run_path(__ENTRY__)
+app = namespace.get('app')
+assert app is not None, __NOAPP__
+
+failures = []
+
+try:
+    from sqlalchemy.orm import configure_mappers
+except ImportError:
+    configure_mappers = None
+
+try:
+    with app.app_context():
+        if configure_mappers is not None:
+            configure_mappers()
+        db = namespace.get('db')
+        if db is not None and hasattr(db, 'create_all'):
+            db.create_all()
+except Exception:
+    failures.append('Database models failed to initialize:\\n' + traceback.format_exc())
+
+if not failures:
+    app.config['PROPAGATE_EXCEPTIONS'] = True
+    client = app.test_client()
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint == 'static' or 'GET' not in rule.methods or rule.arguments:
+            continue
+        try:
+            response = client.get(rule.rule)
+        except Exception:
+            failures.append('GET ' + rule.rule + ' raised an exception:\\n' + traceback.format_exc())
+            continue
+        if response.status_code >= 500:
+            failures.append('GET ' + rule.rule + ' returned HTTP ' + str(response.status_code))
+
+if failures:
+    sys.stderr.write('\\n\\n'.join(failures) + '\\n')
+    sys.exit(1)
+
+server = make_server('127.0.0.1', 0, app)
+print('STARTUP_OK', server.server_port)
+server.server_close()
+"""
+
 PYTHON_PACKAGE_MAP = {
     "kafka": "kafka-python",
     "requests": "requests",
@@ -731,16 +779,11 @@ class CoderAgent(BaseAgent):
             # Load the selected entry point and bind Flask to an
             # available local port. The server is closed after the check.
 
-            startup_script = (
-                "import runpy\n"
-                "from werkzeug.serving import make_server\n"
-                f"namespace = runpy.run_path({entry_point!r})\n"
-                "app = namespace.get('app')\n"
-                f"assert app is not None, "
-                f"{(entry_point + ' must expose a Flask app named app')!r}\n"
-                "server = make_server('127.0.0.1', 0, app)\n"
-                "print('STARTUP_OK', server.server_port)\n"
-                "server.server_close()\n"
+            startup_script = FLASK_SMOKE_SCRIPT.replace(
+                "__ENTRY__", repr(entry_point)
+            ).replace(
+                "__NOAPP__",
+                repr(entry_point + " must expose a Flask app named app"),
             )
 
             result = self.workspace.run_command(
